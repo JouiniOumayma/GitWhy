@@ -1,0 +1,370 @@
+[
+  {
+    "id": "httpie/cli#1611",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "git:5b604c3",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.85
+    },
+    "repository_id": "httpie/cli",
+    "number": 1611,
+    "title": "Fix `https` behaviour in fish",
+    "body": "Using the name `https` to invoke HTTPie should make HTTPie default to the https:// scheme, but a fish function replacing `https` by `http` defeated that behaviour.",
+    "url": "https://github.com/httpie/cli/pull/1611",
+    "state": "merged",
+    "is_draft": false,
+    "author": {
+      "id": "ash@sorrel.sh",
+      "name": "ash",
+      "email": "ash@sorrel.sh"
+    },
+    "base_branch": "master",
+    "head_branch": "ash/patch-1611",
+    "created_at": "2024-12-17T17:30:35Z",
+    "merged_at": "2024-12-17T09:30:35-08:00",
+    "merge_commit_id": "5b604c37c6c67e18e7c3e9aee6c88a8c22b98345",
+    "merge_strategy": "squash",
+    "commits": [
+      "5b604c37c6c67e18e7c3e9aee6c88a8c22b98345"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::extras/httpie-completion.fish",
+        "path": "extras/httpie-completion.fish",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 3,
+    "review_count": 2,
+    "labels": [],
+    "closes_issues": []
+  },
+  {
+    "id": "httpie/cli#1596",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "git:fd30c4e",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.85
+    },
+    "repository_id": "httpie/cli",
+    "number": 1596,
+    "title": "Explicitly load default certificates when creating SSL context (#1583)",
+    "body": "Requests >= 2.32.3 no longer loads the default (system-wide) set of trusted certificates into custom SSL contexts, which broke HTTPie users. We now explicitly load them, and drop the upper bound on the requests dependency that PR-less commit 7f03c52 had introduced as a stop-gap.",
+    "url": "https://github.com/httpie/cli/pull/1596",
+    "state": "merged",
+    "is_draft": false,
+    "author": {
+      "id": "adam@blueradius.ca",
+      "name": "Adam Williamson",
+      "email": "adam@blueradius.ca"
+    },
+    "base_branch": "master",
+    "head_branch": "adam/patch-1596",
+    "created_at": "2024-11-01T09:37:11-07:00",
+    "merged_at": "2024-11-01T09:37:11-07:00",
+    "merge_commit_id": "fd30c4ef6230a927f9dcfad6301c40e8bf846156",
+    "merge_strategy": "squash",
+    "commits": [
+      "fd30c4ef6230a927f9dcfad6301c40e8bf846156"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/ssl_.py",
+        "path": "httpie/ssl_.py",
+        "change_type": "added",
+        "additions": 7,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 8,
+    "deletions": 1,
+    "review_count": 1,
+    "labels": [],
+    "closes_issues": [
+      {
+        "incident_id": "httpie/cli#issue-1583",
+        "issue_number": 1583,
+        "method": "commit_message",
+        "confidence": 0.6,
+        "referenced_in": "body",
+        "evidence_text": "Explicitly load default certificates when creating SSL context (#1583) (#1596)",
+        "provenance": {
+          "source": "synthetic_fixture",
+          "source_uri": "git:fd30c4e:subject",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.6
+        }
+      }
+    ]
+  },
+  {
+    "id": "httpie/cli#1029",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "git:3c07a25",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.85
+    },
+    "repository_id": "httpie/cli",
+    "number": 1029,
+    "title": "Add support for max-age=0 cookie expiry",
+    "body": "A cookie with `max-age=0` must be treated as expired immediately.",
+    "url": "https://github.com/httpie/cli/pull/1029",
+    "state": "merged",
+    "is_draft": false,
+    "author": {
+      "id": "41421345+luckydenis@users.noreply.github.com",
+      "name": "Denis Belavin",
+      "email": "41421345+luckydenis@users.noreply.github.com"
+    },
+    "base_branch": "master",
+    "head_branch": "denis/patch-1029",
+    "created_at": "2021-02-06T12:50:34+03:00",
+    "merged_at": "2021-02-06T10:50:34+01:00",
+    "merge_commit_id": "3c07a2532647f64a4aaa7c729557fee5dcc2e182",
+    "merge_strategy": "squash",
+    "commits": [
+      "3c07a2532647f64a4aaa7c729557fee5dcc2e182"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/utils.py",
+        "path": "httpie/utils.py",
+        "change_type": "added",
+        "additions": 9,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::tests/test_sessions.py",
+        "path": "tests/test_sessions.py",
+        "change_type": "added",
+        "additions": 9,
+        "deletions": 0,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 18,
+    "review_count": 1,
+    "labels": [],
+    "closes_issues": []
+  },
+  {
+    "id": "httpie/cli#1040",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "git:8f83bfe",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.85
+    },
+    "repository_id": "httpie/cli",
+    "number": 1040,
+    "title": "Replace typography quotes",
+    "body": "Use straight quotes in generated documents instead of typographic ones.",
+    "url": "https://github.com/httpie/cli/pull/1040",
+    "state": "merged",
+    "is_draft": false,
+    "author": {
+      "id": "almad@apible.io",
+      "name": "Almad",
+      "email": "almad@apible.io"
+    },
+    "base_branch": "master",
+    "head_branch": "almad/patch-1040",
+    "created_at": "2021-02-24T14:38:18+01:00",
+    "merged_at": "2021-02-24T14:38:18+01:00",
+    "merge_commit_id": "8f83bfe7679c56843452cbd255adfd4f6d582c89",
+    "merge_strategy": "squash",
+    "commits": [
+      "8f83bfe7679c56843452cbd255adfd4f6d582c89"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "review_count": 1,
+    "labels": [],
+    "closes_issues": []
+  },
+  {
+    "id": "httpie/cli#1387",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "git:2142ae6",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.85
+    },
+    "repository_id": "httpie/cli",
+    "number": 1387,
+    "title": "Final release prep for 3.2.0",
+    "body": "Version bump, man pages and changelog.",
+    "url": "https://github.com/httpie/cli/pull/1387",
+    "state": "merged",
+    "is_draft": false,
+    "author": {
+      "id": "isidentical@gmail.com",
+      "name": "Batuhan Taskaya",
+      "email": "isidentical@gmail.com"
+    },
+    "base_branch": "master",
+    "head_branch": "batuhan/patch-1387",
+    "created_at": "2022-05-05T23:32:35+03:00",
+    "merged_at": "2022-05-05T23:32:35+03:00",
+    "merge_commit_id": "2142ae60c339144697cf93f40d1e740be344224d",
+    "merge_strategy": "squash",
+    "commits": [
+      "2142ae60c339144697cf93f40d1e740be344224d"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/http.1",
+        "path": "extras/man/http.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/httpie.1",
+        "path": "extras/man/httpie.1",
+        "change_type": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/https.1",
+        "path": "extras/man/https.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 5,
+    "additions": 9,
+    "deletions": 6,
+    "review_count": 1,
+    "labels": [],
+    "closes_issues": []
+  },
+  {
+    "id": "httpie/cli#1313",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "git:266c637",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.85
+    },
+    "repository_id": "httpie/cli",
+    "number": 1313,
+    "title": "Release prep for 3.1.0",
+    "body": "Version bump, man pages and changelog.",
+    "url": "https://github.com/httpie/cli/pull/1313",
+    "state": "merged",
+    "is_draft": false,
+    "author": {
+      "id": "isidentical@gmail.com",
+      "name": "Batuhan Taskaya",
+      "email": "isidentical@gmail.com"
+    },
+    "base_branch": "master",
+    "head_branch": "batuhan/patch-1313",
+    "created_at": "2022-03-08T01:50:09+03:00",
+    "merged_at": "2022-03-08T01:50:09+03:00",
+    "merge_commit_id": "266c6375c6d687c3aad07962cb3f5bef7d39bbbf",
+    "merge_strategy": "squash",
+    "commits": [
+      "266c6375c6d687c3aad07962cb3f5bef7d39bbbf"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 5,
+        "deletions": 3,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 3,
+    "additions": 7,
+    "deletions": 5,
+    "review_count": 1,
+    "labels": [],
+    "closes_issues": []
+  }
+]

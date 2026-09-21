@@ -1,0 +1,1933 @@
+[
+  {
+    "id": "5b604c37c6c67e18e7c3e9aee6c88a8c22b98345",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:5b604c37c6c67e18e7c3e9aee6c88a8c22b98345",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "5b604c37c6c67e18e7c3e9aee6c88a8c22b98345",
+    "short_sha": "5b604c3",
+    "subject": "Fix `https` behaviour in fish (#1611)",
+    "body": "Using the name `https` to invoke HTTPie should make HTTPie default to\nthe https:// scheme, but using a fish function to replace invocations of\n`https` with invocations of `http` defeats this behaviour. Instead, just\ntell fish to complete `https` in the same way as `http`.",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-12-17T17:30:35Z",
+    "committed_at": "2024-12-17T09:30:35-08:00",
+    "author": {
+      "id": "ash@sorrel.sh",
+      "name": "ash",
+      "email": "ash@sorrel.sh"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "2843b874c60bda30e7393f0500353b6fe8451542"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::extras/httpie-completion.fish",
+        "path": "extras/httpie-completion.fish",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 3,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1611
+  },
+  {
+    "id": "fd30c4ef6230a927f9dcfad6301c40e8bf846156",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:fd30c4ef6230a927f9dcfad6301c40e8bf846156",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "fd30c4ef6230a927f9dcfad6301c40e8bf846156",
+    "short_sha": "fd30c4e",
+    "subject": "Explicitly load default certificates when creating SSL context (#1583) (#1596)",
+    "body": "* Explicitly load default certificates when creating SSL context (#1583)\n\nRequests prior to 2.32.3 always loaded the default (system-wide)\nset of trusted certificates into custom SSL contexts. 2.32.3 no\nlonger does. This has broken a lot of users, but the fix is\nmoving slowly upstream due to security considerations - see\nhttps://github.com/psf/requests/issues/6730 and\nhttps://github.com/psf/requests/pull/6731 .\n\nAs suggested at\nhttps://github.com/psf/requests/pull/6710#issuecomment-2137802782\nthis can be worked around by explicitly loading the default\ncertificates into the context. We check the method exists before\ncalling it just to be safe, it was added in Python 3.4.\n\nSigned-off-by: Adam Williamson <awilliam@redhat.com>\n\n* Drop the upper bound on the requests dependency again\n\nAs we can now work with requests 2.32.3+, we no longer need this\npin.\n\nSigned-off-by: Adam Williamson <awilliam@redhat.com>\n\n---------\n\nSigned-off-by: Adam Williamson <awilliam@redhat.com>",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-11-01T09:37:11-07:00",
+    "committed_at": "2024-11-01T09:37:11-07:00",
+    "author": {
+      "id": "adam@blueradius.ca",
+      "name": "Adam Williamson",
+      "email": "adam@blueradius.ca"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "cee82c825e3ed2eeb9f0fc5f31d478c6b8683fca"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/ssl_.py",
+        "path": "httpie/ssl_.py",
+        "change_type": "added",
+        "additions": 7,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 8,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1596
+  },
+  {
+    "id": "7f03c52d2237440c5a672296ce6955aae4ed4f09",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:7f03c52d2237440c5a672296ce6955aae4ed4f09",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "7f03c52d2237440c5a672296ce6955aae4ed4f09",
+    "short_sha": "7f03c52",
+    "subject": "Fix SSL connections by pinning the `requests` version to `2.31.0`",
+    "body": "Close #1583\nClose #1581",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-07-10T16:15:24+02:00",
+    "committed_at": "2024-07-10T16:20:38+02:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "5c068f8102ef91362132606c8923b13fb8c7fd68"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/http.1",
+        "path": "extras/man/http.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/httpie.1",
+        "path": "extras/man/httpie.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/https.1",
+        "path": "extras/man/https.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 6,
+    "additions": 10,
+    "deletions": 9,
+    "tags": [
+      "3.2.3"
+    ],
+    "issue_refs": [
+      {
+        "incident_id": "httpie/cli#issue-1583",
+        "issue_number": 1583,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Close #1583",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:7f03c52",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      },
+      {
+        "incident_id": "httpie/cli#issue-1581",
+        "issue_number": 1581,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Close #1581",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:7f03c52",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      }
+    ],
+    "involves_pull_request": false
+  },
+  {
+    "id": "2105caa49bae87c5809c274e407619a0de2639d1",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:2105caa49bae87c5809c274e407619a0de2639d1",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "2105caa49bae87c5809c274e407619a0de2639d1",
+    "short_sha": "2105caa",
+    "subject": "3.2.4",
+    "is_merge": false,
+    "is_release_commit": true,
+    "branch": "master",
+    "authored_at": "2024-11-01T18:29:56+01:00",
+    "committed_at": "2024-11-01T18:29:56+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "8560d1196d78fa839a4d69503680d95bed4552d4"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "added",
+        "additions": 4,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/http.1",
+        "path": "extras/man/http.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/httpie.1",
+        "path": "extras/man/httpie.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/https.1",
+        "path": "extras/man/https.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 5,
+    "additions": 9,
+    "deletions": 5,
+    "tags": [
+      "3.2.4"
+    ],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "3c07a2532647f64a4aaa7c729557fee5dcc2e182",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:3c07a2532647f64a4aaa7c729557fee5dcc2e182",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "3c07a2532647f64a4aaa7c729557fee5dcc2e182",
+    "short_sha": "3c07a25",
+    "subject": "Add support for max-age=0 cookie expiry (#1029)",
+    "body": "Close #998",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2021-02-06T12:50:34+03:00",
+    "committed_at": "2021-02-06T10:50:34+01:00",
+    "author": {
+      "id": "41421345+luckydenis@users.noreply.github.com",
+      "name": "Denis Belavin",
+      "email": "41421345+luckydenis@users.noreply.github.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "cf78a12e46ced68003263f4f43cee8fac720aa2c"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/utils.py",
+        "path": "httpie/utils.py",
+        "change_type": "added",
+        "additions": 9,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::tests/test_sessions.py",
+        "path": "tests/test_sessions.py",
+        "change_type": "added",
+        "additions": 9,
+        "deletions": 0,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 18,
+    "tags": [],
+    "issue_refs": [
+      {
+        "incident_id": "httpie/cli#issue-998",
+        "issue_number": 998,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Close #998",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:3c07a25",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      }
+    ],
+    "involves_pull_request": true,
+    "pull_request_number": 1029
+  },
+  {
+    "id": "8f83bfe7679c56843452cbd255adfd4f6d582c89",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:8f83bfe7679c56843452cbd255adfd4f6d582c89",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "8f83bfe7679c56843452cbd255adfd4f6d582c89",
+    "short_sha": "8f83bfe",
+    "subject": "Replace typography quotes (#1040)",
+    "body": "fixes #1039",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2021-02-24T14:38:18+01:00",
+    "committed_at": "2021-02-24T14:38:18+01:00",
+    "author": {
+      "id": "almad@apible.io",
+      "name": "Almad",
+      "email": "almad@apible.io"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "a32ad344dda8d0c60c2f21853d7873533f492434"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [
+      {
+        "incident_id": "httpie/cli#issue-1039",
+        "issue_number": 1039,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Fixes #1039",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:8f83bfe",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      }
+    ],
+    "involves_pull_request": true,
+    "pull_request_number": 1040
+  },
+  {
+    "id": "cae83b3f9e2077afee85992e8135cae70bb91cf3",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:cae83b3f9e2077afee85992e8135cae70bb91cf3",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "cae83b3f9e2077afee85992e8135cae70bb91cf3",
+    "short_sha": "cae83b3",
+    "subject": "Add FreeBSD installation instructions",
+    "body": "Closes #761.",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2021-09-23T10:46:06+02:00",
+    "committed_at": "2021-09-23T10:46:06+02:00",
+    "author": {
+      "id": "contact@tiger-222.fr",
+      "name": "Mickaël Schoentgen",
+      "email": "contact@tiger-222.fr"
+    },
+    "committer": {
+      "id": "contact@tiger-222.fr",
+      "name": "Mickaël Schoentgen",
+      "email": "contact@tiger-222.fr"
+    },
+    "parents": [
+      "507514b7958fe2e65ad8466fc4039c54093d7a1c"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 12,
+        "deletions": 3,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 12,
+    "deletions": 3,
+    "tags": [],
+    "issue_refs": [
+      {
+        "incident_id": "httpie/cli#issue-761",
+        "issue_number": 761,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Closes #761",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:cae83b3",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      }
+    ],
+    "involves_pull_request": false
+  },
+  {
+    "id": "e73c3e6c249b89496b4f81fa20bb449911da79f1",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:e73c3e6c249b89496b4f81fa20bb449911da79f1",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "e73c3e6c249b89496b4f81fa20bb449911da79f1",
+    "short_sha": "e73c3e6",
+    "subject": "Fix failing tests with responses ≥ 0.22.0",
+    "body": "Close #1461\nClose #1467\n\nThanks, @alexshpilkin!",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2023-01-15T17:43:17+01:00",
+    "committed_at": "2023-01-15T17:43:17+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "f0563deb7f0db313c1d5cdd8d667972ced0a1e52"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/models.py",
+        "path": "httpie/models.py",
+        "change_type": "modified",
+        "additions": 27,
+        "deletions": 19,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 27,
+    "deletions": 19,
+    "tags": [],
+    "issue_refs": [
+      {
+        "incident_id": "httpie/cli#issue-1461",
+        "issue_number": 1461,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Close #1461",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:e73c3e6",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      },
+      {
+        "incident_id": "httpie/cli#issue-1467",
+        "issue_number": 1467,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Close #1467",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:e73c3e6",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      }
+    ],
+    "involves_pull_request": false
+  },
+  {
+    "id": "29de4ce1151936856cda417767f8c507fc2c201c",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:29de4ce1151936856cda417767f8c507fc2c201c",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "29de4ce1151936856cda417767f8c507fc2c201c",
+    "short_sha": "29de4ce",
+    "subject": "v3.2.2",
+    "is_merge": false,
+    "is_release_commit": true,
+    "branch": "master",
+    "authored_at": "2023-05-19T23:41:26+02:00",
+    "committed_at": "2023-05-19T23:41:26+02:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "879fedc10a89f69469ea3f2934aa702f8ffbf181"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "added",
+        "additions": 4,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 5,
+    "deletions": 1,
+    "tags": [
+      "3.2.2"
+    ],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "2142ae60c339144697cf93f40d1e740be344224d",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:2142ae60c339144697cf93f40d1e740be344224d",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "2142ae60c339144697cf93f40d1e740be344224d",
+    "short_sha": "2142ae6",
+    "subject": "Final release prep for 3.2.0 (#1387)",
+    "is_merge": false,
+    "is_release_commit": true,
+    "branch": "master",
+    "authored_at": "2022-05-05T23:32:35+03:00",
+    "committed_at": "2022-05-05T23:32:35+03:00",
+    "author": {
+      "id": "isidentical@gmail.com",
+      "name": "Batuhan Taskaya",
+      "email": "isidentical@gmail.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "0b6a9b23c2459832413219cb4e9dc1d1b93dc5c0"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/http.1",
+        "path": "extras/man/http.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/httpie.1",
+        "path": "extras/man/httpie.1",
+        "change_type": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/https.1",
+        "path": "extras/man/https.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 5,
+    "additions": 9,
+    "deletions": 6,
+    "tags": [
+      "3.2.0"
+    ],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1387
+  },
+  {
+    "id": "266c6375c6d687c3aad07962cb3f5bef7d39bbbf",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:266c6375c6d687c3aad07962cb3f5bef7d39bbbf",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "266c6375c6d687c3aad07962cb3f5bef7d39bbbf",
+    "short_sha": "266c637",
+    "subject": "Release prep for 3.1.0 (#1313)",
+    "is_merge": false,
+    "is_release_commit": true,
+    "branch": "master",
+    "authored_at": "2022-03-08T01:50:09+03:00",
+    "committed_at": "2022-03-08T01:50:09+03:00",
+    "author": {
+      "id": "isidentical@gmail.com",
+      "name": "Batuhan Taskaya",
+      "email": "isidentical@gmail.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "77af4c7a5cb3d0b3e813c7f678099014c94ff6aa"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 5,
+        "deletions": 3,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 3,
+    "additions": 7,
+    "deletions": 5,
+    "tags": [
+      "3.1.0"
+    ],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1313
+  },
+  {
+    "id": "88140422a9d6585a7edfb2c265ebed5d0736df2c",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:88140422a9d6585a7edfb2c265ebed5d0736df2c",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "88140422a9d6585a7edfb2c265ebed5d0736df2c",
+    "short_sha": "8814042",
+    "subject": "3.0 release prep (#1272)",
+    "is_merge": false,
+    "is_release_commit": true,
+    "branch": "master",
+    "authored_at": "2022-01-21T20:34:38+03:00",
+    "committed_at": "2022-01-21T20:34:38+03:00",
+    "author": {
+      "id": "isidentical@gmail.com",
+      "name": "Batuhan Taskaya",
+      "email": "isidentical@gmail.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "d2d40eb3360f0fe1d871466aa4aadd85c618da12"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 3,
+    "additions": 3,
+    "deletions": 3,
+    "tags": [
+      "3.0.0"
+    ],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1272
+  },
+  {
+    "id": "2843b874c60bda30e7393f0500353b6fe8451542",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:2843b874c60bda30e7393f0500353b6fe8451542",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "2843b874c60bda30e7393f0500353b6fe8451542",
+    "short_sha": "2843b87",
+    "subject": "[automated] Update generated content (#1607)",
+    "body": "Co-authored-by: jkbrzt <jkbrzt@users.noreply.github.com>",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-11-01T10:35:35-07:00",
+    "committed_at": "2024-11-01T10:35:35-07:00",
+    "author": {
+      "id": "41898282+github-actions[bot]@users.noreply.github.com",
+      "name": "github-actions[bot]",
+      "email": "41898282+github-actions[bot]@users.noreply.github.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "2105caa49bae87c5809c274e407619a0de2639d1"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::extras/man/http.1",
+        "path": "extras/man/http.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/httpie.1",
+        "path": "extras/man/httpie.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::extras/man/https.1",
+        "path": "extras/man/https.1",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 3,
+    "additions": 3,
+    "deletions": 3,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1607
+  },
+  {
+    "id": "cee82c825e3ed2eeb9f0fc5f31d478c6b8683fca",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:cee82c825e3ed2eeb9f0fc5f31d478c6b8683fca",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "cee82c825e3ed2eeb9f0fc5f31d478c6b8683fca",
+    "short_sha": "cee82c8",
+    "subject": "Fix link to CurliPie tool (#1582)",
+    "body": "* Fix link to CurliPie tool\n\n* Use the link to web version for CurliPie\n\nCo-authored-by: Jan Brasna <1784648+janbrasna@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Jan Brasna <1784648+janbrasna@users.noreply.github.com>",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-10-31T23:13:24+07:00",
+    "committed_at": "2024-10-31T09:13:24-07:00",
+    "author": {
+      "id": "ng.hong.quan@gmail.com",
+      "name": "Nguyễn Hồng Quân",
+      "email": "ng.hong.quan@gmail.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "9eb8699873007947765f342088744775b0bbbb11"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1582
+  },
+  {
+    "id": "5c068f8102ef91362132606c8923b13fb8c7fd68",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:5c068f8102ef91362132606c8923b13fb8c7fd68",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "5c068f8102ef91362132606c8923b13fb8c7fd68",
+    "short_sha": "5c068f8",
+    "subject": "Re-add conditional colorama dependency",
+    "body": "#1553",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-03-18T16:53:23+01:00",
+    "committed_at": "2024-03-18T16:53:23+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "change_type": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 2,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "8560d1196d78fa839a4d69503680d95bed4552d4",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:8560d1196d78fa839a4d69503680d95bed4552d4",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "8560d1196d78fa839a4d69503680d95bed4552d4",
+    "short_sha": "8560d11",
+    "subject": "Update test.yml",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-11-01T18:01:03+01:00",
+    "committed_at": "2024-11-01T18:01:03+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "2ef4a57d8c2a3defd189e0cc6e365fa8a9aaff2c"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::.github/workflows/tests.yml",
+        "path": ".github/workflows/tests.yml",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "cf78a12e46ced68003263f4f43cee8fac720aa2c",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:cf78a12e46ced68003263f4f43cee8fac720aa2c",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "cf78a12e46ced68003263f4f43cee8fac720aa2c",
+    "short_sha": "cf78a12",
+    "subject": "Show --check-status warning with --quiet as well. (#1026)",
+    "body": "Fixes #1028",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2021-01-31T00:58:56+01:00",
+    "committed_at": "2021-01-31T00:58:56+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/core.py",
+        "path": "httpie/core.py",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::tests/test_output.py",
+        "path": "tests/test_output.py",
+        "change_type": "added",
+        "additions": 15,
+        "deletions": 0,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 16,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [
+      {
+        "incident_id": "httpie/cli#issue-1028",
+        "issue_number": 1028,
+        "relation": "CLOSES",
+        "method": "commit_message",
+        "confidence": 0.95,
+        "referenced_in": "body",
+        "evidence_text": "Fixes #1028",
+        "provenance": {
+          "source": "git",
+          "source_uri": "git:cf78a12",
+          "ingested_at": "2026-09-18T00:00:00Z",
+          "extractor": "nexus-devintel.fixtures.build_fixtures",
+          "extractor_version": "0.1.0",
+          "confidence": 0.95
+        }
+      }
+    ],
+    "involves_pull_request": true,
+    "pull_request_number": 1026
+  },
+  {
+    "id": "a32ad344dda8d0c60c2f21853d7873533f492434",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:a32ad344dda8d0c60c2f21853d7873533f492434",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "a32ad344dda8d0c60c2f21853d7873533f492434",
+    "short_sha": "a32ad34",
+    "subject": "Update README.rst",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2021-02-23T12:51:06+01:00",
+    "committed_at": "2021-02-23T12:51:06+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [],
+    "files_changed": [],
+    "changed_files_count": 0,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "507514b7958fe2e65ad8466fc4039c54093d7a1c",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:507514b7958fe2e65ad8466fc4039c54093d7a1c",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "507514b7958fe2e65ad8466fc4039c54093d7a1c",
+    "short_sha": "507514b",
+    "subject": "Add workflow to test with pyOpenSSL active (#1164)",
+    "body": "* Add workflow to test with pyOpenSSL active\n\nOriginal patch by @gmelodie.\n\n* Fix tests on Windows with Python 3.6",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2021-09-23T10:37:23+02:00",
+    "committed_at": "2021-09-23T10:37:23+02:00",
+    "author": {
+      "id": "contact@tiger-222.fr",
+      "name": "Mickaël Schoentgen",
+      "email": "contact@tiger-222.fr"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::.github/workflows/tests.yml",
+        "path": ".github/workflows/tests.yml",
+        "change_type": "added",
+        "additions": 5,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::setup.py",
+        "path": "setup.py",
+        "change_type": "added",
+        "additions": 1,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::tests/conftest.py",
+        "path": "tests/conftest.py",
+        "change_type": "added",
+        "additions": 18,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::tests/test_ssl.py",
+        "path": "tests/test_ssl.py",
+        "change_type": "modified",
+        "additions": 17,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 4,
+    "additions": 41,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1164
+  },
+  {
+    "id": "f0563deb7f0db313c1d5cdd8d667972ced0a1e52",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:f0563deb7f0db313c1d5cdd8d667972ced0a1e52",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "f0563deb7f0db313c1d5cdd8d667972ced0a1e52",
+    "short_sha": "f0563de",
+    "subject": "Bump mislav/bump-homebrew-formula-action from 1 to 2 (#1453)",
+    "body": "Bumps [mislav/bump-homebrew-formula-action](https://github.com/mislav/bump-homebrew-formula-action) from 1 to 2.\n- [Release notes](https://github.com/mislav/bump-homebrew-formula-action/releases)\n- [Commits](https://github.com/mislav/bump-homebrew-formula-action/compare/v1...v2)\n\n---\nupdated-dependencies:\n- dependency-name: mislav/bump-homebrew-formula-action\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2023-01-04T03:18:15-08:00",
+    "committed_at": "2023-01-04T03:18:15-08:00",
+    "author": {
+      "id": "49699333+dependabot[bot]@users.noreply.github.com",
+      "name": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::.github/workflows/release-brew.yml",
+        "path": ".github/workflows/release-brew.yml",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1453
+  },
+  {
+    "id": "879fedc10a89f69469ea3f2934aa702f8ffbf181",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:879fedc10a89f69469ea3f2934aa702f8ffbf181",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "879fedc10a89f69469ea3f2934aa702f8ffbf181",
+    "short_sha": "879fedc",
+    "subject": "Flake8",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2023-05-19T23:41:16+02:00",
+    "committed_at": "2023-05-19T23:41:16+02:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::tests/test_sessions.py",
+        "path": "tests/test_sessions.py",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "0b6a9b23c2459832413219cb4e9dc1d1b93dc5c0",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:0b6a9b23c2459832413219cb4e9dc1d1b93dc5c0",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "0b6a9b23c2459832413219cb4e9dc1d1b93dc5c0",
+    "short_sha": "0b6a9b2",
+    "subject": "Add missing changelog entries (#1386)",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2022-05-05T23:18:00+03:00",
+    "committed_at": "2022-05-05T23:18:00+03:00",
+    "author": {
+      "id": "isidentical@gmail.com",
+      "name": "Batuhan Taskaya",
+      "email": "isidentical@gmail.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 8,
+        "deletions": 3,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 8,
+    "deletions": 3,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1386
+  },
+  {
+    "id": "77af4c7a5cb3d0b3e813c7f678099014c94ff6aa",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:77af4c7a5cb3d0b3e813c7f678099014c94ff6aa",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "77af4c7a5cb3d0b3e813c7f678099014c94ff6aa",
+    "short_sha": "77af4c7",
+    "subject": "Decouple parser definition from argparse (#1293)",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2022-03-08T01:34:04+03:00",
+    "committed_at": "2022-03-08T01:34:04+03:00",
+    "author": {
+      "id": "isidentical@gmail.com",
+      "name": "Batuhan Taskaya",
+      "email": "isidentical@gmail.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "added",
+        "additions": 21,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/cli/constants.py",
+        "path": "httpie/cli/constants.py",
+        "change_type": "modified",
+        "additions": 7,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/cli/definition.py",
+        "path": "httpie/cli/definition.py",
+        "change_type": "modified",
+        "additions": 274,
+        "deletions": 263,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/cli/options.py",
+        "path": "httpie/cli/options.py",
+        "change_type": "added",
+        "additions": 189,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/core.py",
+        "path": "httpie/core.py",
+        "change_type": "modified",
+        "additions": 18,
+        "deletions": 11,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/manager/cli.py",
+        "path": "httpie/manager/cli.py",
+        "change_type": "added",
+        "additions": 8,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/output/models.py",
+        "path": "httpie/output/models.py",
+        "change_type": "added",
+        "additions": 44,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/output/streams.py",
+        "path": "httpie/output/streams.py",
+        "change_type": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/output/writer.py",
+        "path": "httpie/output/writer.py",
+        "change_type": "modified",
+        "additions": 49,
+        "deletions": 21,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::tests/test_httpie_cli.py",
+        "path": "tests/test_httpie_cli.py",
+        "change_type": "added",
+        "additions": 13,
+        "deletions": 0,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::tests/test_parser_schema.py",
+        "path": "tests/test_parser_schema.py",
+        "change_type": "added",
+        "additions": 60,
+        "deletions": 0,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 11,
+    "additions": 686,
+    "deletions": 297,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1293
+  },
+  {
+    "id": "d2d40eb3360f0fe1d871466aa4aadd85c618da12",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:d2d40eb3360f0fe1d871466aa4aadd85c618da12",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "d2d40eb3360f0fe1d871466aa4aadd85c618da12",
+    "short_sha": "d2d40eb",
+    "subject": "Finish docs for v3.0.0 (#1269)",
+    "body": "* WIP\n\n* Rewrite the introduction segment of the Nested JSON\n\nCo-authored-by: Batuhan Taskaya <isidentical@gmail.com>",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2022-01-21T18:24:07+01:00",
+    "committed_at": "2022-01-21T20:24:07+03:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 74,
+        "deletions": 104,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 77,
+    "deletions": 107,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1269
+  },
+  {
+    "id": "2ef4a57d8c2a3defd189e0cc6e365fa8a9aaff2c",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:2ef4a57d8c2a3defd189e0cc6e365fa8a9aaff2c",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "2ef4a57d8c2a3defd189e0cc6e365fa8a9aaff2c",
+    "short_sha": "2ef4a57",
+    "subject": "Fix/refactor default cert loading",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-11-01T17:47:27+01:00",
+    "committed_at": "2024-11-01T17:47:27+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "ff742581f49dbc370b3288dd53d35f843c564c66"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/compat.py",
+        "path": "httpie/compat.py",
+        "change_type": "modified",
+        "additions": 14,
+        "deletions": 3,
+        "is_binary": false
+      },
+      {
+        "file_id": "httpie/cli::httpie/ssl_.py",
+        "path": "httpie/ssl_.py",
+        "change_type": "modified",
+        "additions": 6,
+        "deletions": 7,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 2,
+    "additions": 20,
+    "deletions": 10,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "ff742581f49dbc370b3288dd53d35f843c564c66",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:ff742581f49dbc370b3288dd53d35f843c564c66",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "ff742581f49dbc370b3288dd53d35f843c564c66",
+    "short_sha": "ff74258",
+    "subject": "Cleanup default cert loading",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-11-01T17:38:39+01:00",
+    "committed_at": "2024-11-01T17:38:39+01:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "fd30c4ef6230a927f9dcfad6301c40e8bf846156"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::httpie/ssl_.py",
+        "path": "httpie/ssl_.py",
+        "change_type": "modified",
+        "additions": 7,
+        "deletions": 9,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 7,
+    "deletions": 9,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": false
+  },
+  {
+    "id": "9eb8699873007947765f342088744775b0bbbb11",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:9eb8699873007947765f342088744775b0bbbb11",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "9eb8699873007947765f342088744775b0bbbb11",
+    "short_sha": "9eb8699",
+    "subject": "Added an alias for HTTPS in fish completions (#1598)",
+    "body": "Ensure that fish completion is working with the `https` command. It just wraps the identical completions from `http` to `https`.",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-10-31T17:10:54+01:00",
+    "committed_at": "2024-10-31T09:10:54-07:00",
+    "author": {
+      "id": "der@dennis-heinri.ch",
+      "name": "Dennis Heinrich",
+      "email": "der@dennis-heinri.ch"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "30373274104f592975cb1510b286f6c51d8dcf28"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::extras/httpie-completion.fish",
+        "path": "extras/httpie-completion.fish",
+        "change_type": "added",
+        "additions": 7,
+        "deletions": 0,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 7,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1598
+  },
+  {
+    "id": "30373274104f592975cb1510b286f6c51d8dcf28",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:30373274104f592975cb1510b286f6c51d8dcf28",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "30373274104f592975cb1510b286f6c51d8dcf28",
+    "short_sha": "3037327",
+    "subject": "Update the raw json fields example (#1606)",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-11-01T00:02:17+08:00",
+    "committed_at": "2024-10-31T09:02:17-07:00",
+    "author": {
+      "id": "82575487+arthur-mountain@users.noreply.github.com",
+      "name": "Arthur",
+      "email": "82575487+arthur-mountain@users.noreply.github.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "50e1564600eaca3ff99ffd7a7f707f564da3af48"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1606
+  },
+  {
+    "id": "50e1564600eaca3ff99ffd7a7f707f564da3af48",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:50e1564600eaca3ff99ffd7a7f707f564da3af48",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "50e1564600eaca3ff99ffd7a7f707f564da3af48",
+    "short_sha": "50e1564",
+    "subject": "Update the Forms section of README.md (#1593)",
+    "body": "The Forms section of README.md was missing what the data fields are serialized as.",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-10-28T12:28:36-07:00",
+    "committed_at": "2024-10-28T20:28:36+01:00",
+    "author": {
+      "id": "andre.srinivasan@gmail.com",
+      "name": "André Srinivasan",
+      "email": "andre.srinivasan@gmail.com"
+    },
+    "committer": {
+      "id": "noreply@github.com",
+      "name": "GitHub",
+      "email": "noreply@github.com"
+    },
+    "parents": [
+      "f4cf43ecdd6c5c52b5c4ba91086d5c6ccfebcd6d"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::docs/README.md",
+        "path": "docs/README.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": true,
+    "pull_request_number": 1593
+  },
+  {
+    "id": "f4cf43ecdd6c5c52b5c4ba91086d5c6ccfebcd6d",
+    "provenance": {
+      "source": "git",
+      "source_uri": "git:f4cf43ecdd6c5c52b5c4ba91086d5c6ccfebcd6d",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 1.0
+    },
+    "repository_id": "httpie/cli",
+    "sha": "f4cf43ecdd6c5c52b5c4ba91086d5c6ccfebcd6d",
+    "short_sha": "f4cf43e",
+    "subject": "Cleanup",
+    "is_merge": false,
+    "is_release_commit": false,
+    "branch": "master",
+    "authored_at": "2024-07-10T16:24:03+02:00",
+    "committed_at": "2024-07-10T16:24:03+02:00",
+    "author": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "committer": {
+      "id": "jakub@roztocil.co",
+      "name": "Jakub Roztocil",
+      "email": "jakub@roztocil.co"
+    },
+    "parents": [
+      "7f03c52d2237440c5a672296ce6955aae4ed4f09"
+    ],
+    "files_changed": [
+      {
+        "file_id": "httpie/cli::CHANGELOG.md",
+        "path": "CHANGELOG.md",
+        "change_type": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "is_binary": false
+      }
+    ],
+    "changed_files_count": 1,
+    "additions": 1,
+    "deletions": 1,
+    "tags": [],
+    "issue_refs": [],
+    "involves_pull_request": false
+  }
+]

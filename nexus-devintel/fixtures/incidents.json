@@ -1,0 +1,424 @@
+[
+  {
+    "id": "httpie/cli#issue-1583",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:httpie/cli#1583",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.6
+    },
+    "repository_id": "httpie/cli",
+    "number": 1583,
+    "title": "HTTPS requests fail after requests 2.32.3: certificate verify failed",
+    "body": "Since requests 2.32.3, `http https://example.org` fails with `SSLError: certificate verify failed` when a custom CA bundle is used, because requests no longer loads the system default certificates into user-provided SSL contexts. Reported by several distribution packagers.",
+    "url": "https://github.com/httpie/cli/issues/1583",
+    "status": "closed",
+    "severity": "sev1",
+    "severity_score": 0.95,
+    "labels": [
+      "bug",
+      "ssl",
+      "regression"
+    ],
+    "reporter": {
+      "id": "awilliam@redhat.com",
+      "name": "Adam Williamson",
+      "email": "awilliam@redhat.com"
+    },
+    "opened_at": "2024-06-28T09:12:00Z",
+    "closed_at": "2024-11-01T17:45:00Z",
+    "detection_source": "user_report",
+    "is_regression": true,
+    "resolution_commit_ids": [
+      "7f03c52d2237440c5a672296ce6955aae4ed4f09",
+      "fd30c4ef6230a927f9dcfad6301c40e8bf846156"
+    ],
+    "resolution_pr_numbers": [
+      1596
+    ],
+    "first_affected_version": "3.2.2",
+    "fixed_in_version": "3.2.4",
+    "affected_files": [
+      {
+        "file_id": "httpie/cli::httpie/ssl_.py",
+        "path": "httpie/ssl_.py",
+        "role": "root_cause",
+        "confidence": 0.9,
+        "method": "commit_overlap",
+        "rationale": "The real fix (fd30c4e) added explicit loading of the default certificates in create_ssl_context()."
+      },
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "role": "fix",
+        "confidence": 0.85,
+        "method": "commit_overlap",
+        "rationale": "Workaround 7f03c52 pinned requests==2.31.0 here; fd30c4e dropped that upper bound again."
+      },
+      {
+        "file_id": "httpie/cli::httpie/__init__.py",
+        "path": "httpie/__init__.py",
+        "role": "symptom",
+        "confidence": 0.5,
+        "method": "commit_overlap",
+        "rationale": "Version bumped in every release commit, so it co-occurs with the fix without being a cause."
+      }
+    ],
+    "observed_in": [
+      "httpie/cli@3.2.2",
+      "httpie/cli@3.2.3"
+    ],
+    "caused_by": [
+      {
+        "incident_id": "psf/requests#issue-6730",
+        "repository_id": "psf/requests",
+        "confidence": 0.9,
+        "method": "issue_body_reference",
+        "rationale": "The PR body of #1596 explicitly points at psf/requests#6730: requests no longer loads the system CA bundle into custom SSL contexts.",
+        "evidence_url": "https://github.com/psf/requests/issues/6730"
+      }
+    ],
+    "related_incident_ids": []
+  },
+  {
+    "id": "httpie/cli#issue-1581",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:httpie/cli#1581",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.5
+    },
+    "repository_id": "httpie/cli",
+    "number": 1581,
+    "title": "SSL: unable to get local issuer certificate with a custom CA bundle",
+    "body": "Same root symptom as #1583, reported against 3.2.2. Closed by the same stop-gap commit that pinned requests to 2.31.0.",
+    "url": "https://github.com/httpie/cli/issues/1581",
+    "status": "closed",
+    "severity": "sev2",
+    "severity_score": 0.7,
+    "labels": [
+      "bug",
+      "ssl"
+    ],
+    "opened_at": "2024-06-24T16:03:00Z",
+    "closed_at": "2024-07-10T16:20:00Z",
+    "detection_source": "user_report",
+    "is_regression": false,
+    "resolution_commit_ids": [
+      "7f03c52d2237440c5a672296ce6955aae4ed4f09"
+    ],
+    "resolution_pr_numbers": [],
+    "first_affected_version": "3.2.2",
+    "fixed_in_version": "3.2.3",
+    "affected_files": [
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "role": "fix",
+        "confidence": 0.9,
+        "method": "commit_overlap",
+        "rationale": "requests pinned to 2.31.0."
+      }
+    ],
+    "observed_in": [
+      "httpie/cli@3.2.2"
+    ],
+    "caused_by": [],
+    "related_incident_ids": [
+      "httpie/cli#issue-1583"
+    ]
+  },
+  {
+    "id": "httpie/cli#issue-998",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:httpie/cli#998",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.6
+    },
+    "repository_id": "httpie/cli",
+    "number": 998,
+    "title": "Cookies with max-age=0 are never treated as expired",
+    "body": "RFC 6265 says `Max-Age=0` deletes the cookie immediately; HTTPie kept sending it because the expiry check only handled negative values.",
+    "url": "https://github.com/httpie/cli/issues/998",
+    "status": "closed",
+    "severity": "sev3",
+    "severity_score": 0.4,
+    "labels": [
+      "bug",
+      "sessions"
+    ],
+    "reporter": {
+      "id": "reporter998@example.org",
+      "name": "Community reporter",
+      "email": "reporter998@example.org"
+    },
+    "opened_at": "2020-11-30T12:00:00Z",
+    "closed_at": "2021-02-06T10:50:00Z",
+    "detection_source": "user_report",
+    "is_regression": false,
+    "resolution_commit_ids": [
+      "3c07a2532647f64a4aaa7c729557fee5dcc2e182"
+    ],
+    "resolution_pr_numbers": [
+      1029
+    ],
+    "first_affected_version": "2.4.0",
+    "fixed_in_version": "3.0.0",
+    "affected_files": [
+      {
+        "file_id": "httpie/cli::httpie/utils.py",
+        "path": "httpie/utils.py",
+        "role": "root_cause",
+        "confidence": 0.9,
+        "method": "commit_overlap",
+        "rationale": "The expiry helper lives in httpie/utils.py and grew +9 lines in the fixing commit."
+      },
+      {
+        "file_id": "httpie/cli::httpie/models.py",
+        "path": "httpie/models.py",
+        "role": "context",
+        "confidence": 0.4,
+        "method": "import_blast_radius",
+        "rationale": "Imports httpie/utils.py, so it is inside the blast radius but was not modified."
+      }
+    ],
+    "observed_in": [
+      "httpie/cli@3.0.0"
+    ],
+    "caused_by": [],
+    "related_incident_ids": []
+  },
+  {
+    "id": "httpie/cli#issue-1039",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:httpie/cli#1039",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.5
+    },
+    "repository_id": "httpie/cli",
+    "number": 1039,
+    "title": "Typographic quotes in generated documents break CLI copy/paste",
+    "body": "Examples copied from the docs pasted the wrong quote characters.",
+    "url": "https://github.com/httpie/cli/issues/1039",
+    "status": "closed",
+    "severity": "sev4",
+    "severity_score": 0.15,
+    "labels": [
+      "docs"
+    ],
+    "opened_at": "2021-02-20T08:00:00Z",
+    "closed_at": "2021-02-24T14:38:00Z",
+    "detection_source": "maintainer",
+    "is_regression": false,
+    "resolution_commit_ids": [
+      "8f83bfe7679c56843452cbd255adfd4f6d582c89"
+    ],
+    "resolution_pr_numbers": [
+      1040
+    ],
+    "fixed_in_version": "3.0.0",
+    "affected_files": [
+      {
+        "file_id": "httpie/cli::setup.cfg",
+        "path": "setup.cfg",
+        "role": "root_cause",
+        "confidence": 0.8,
+        "method": "commit_overlap",
+        "rationale": "The only file changed by the fix."
+      }
+    ],
+    "observed_in": [],
+    "caused_by": [],
+    "related_incident_ids": []
+  },
+  {
+    "id": "httpie/cli#issue-1461",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:httpie/cli#1461",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.5
+    },
+    "repository_id": "httpie/cli",
+    "number": 1461,
+    "title": "Test suite fails with responses >= 0.22.0",
+    "body": "The `responses` test double changed its public API, so HTTPie's session tests started failing in CI.",
+    "url": "https://github.com/httpie/cli/issues/1461",
+    "status": "closed",
+    "severity": "sev3",
+    "severity_score": 0.35,
+    "labels": [
+      "ci",
+      "tests"
+    ],
+    "opened_at": "2023-01-10T11:00:00Z",
+    "closed_at": "2023-01-15T17:43:00Z",
+    "detection_source": "test_failure",
+    "is_regression": true,
+    "resolution_commit_ids": [
+      "e73c3e6c249b89496b4f81fa20bb449911da79f1"
+    ],
+    "resolution_pr_numbers": [],
+    "first_affected_version": "3.2.0",
+    "fixed_in_version": "3.2.2",
+    "affected_files": [
+      {
+        "file_id": "httpie/cli::httpie/models.py",
+        "path": "httpie/models.py",
+        "role": "root_cause",
+        "confidence": 0.7,
+        "method": "commit_overlap",
+        "rationale": "+27/-19 lines in the fixing commit."
+      }
+    ],
+    "observed_in": [],
+    "caused_by": [],
+    "related_incident_ids": []
+  },
+  {
+    "id": "httpie/cli#issue-1467",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:httpie/cli#1467",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.5
+    },
+    "repository_id": "httpie/cli",
+    "number": 1467,
+    "title": "CI: session tests flaky on Python 3.11",
+    "body": "Same root cause as #1461; closed by the same commit.",
+    "url": "https://github.com/httpie/cli/issues/1467",
+    "status": "closed",
+    "severity": "sev4",
+    "severity_score": 0.2,
+    "labels": [
+      "ci"
+    ],
+    "opened_at": "2023-01-13T09:30:00Z",
+    "closed_at": "2023-01-15T17:43:00Z",
+    "detection_source": "test_failure",
+    "is_regression": false,
+    "resolution_commit_ids": [
+      "e73c3e6c249b89496b4f81fa20bb449911da79f1"
+    ],
+    "resolution_pr_numbers": [],
+    "fixed_in_version": "3.2.2",
+    "affected_files": [],
+    "observed_in": [],
+    "caused_by": [],
+    "related_incident_ids": [
+      "httpie/cli#issue-1461"
+    ]
+  },
+  {
+    "id": "httpie/cli#issue-761",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:httpie/cli#761",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.5
+    },
+    "repository_id": "httpie/cli",
+    "number": 761,
+    "title": "Documentation: no FreeBSD installation instructions",
+    "body": "Users on FreeBSD had no documented install path.",
+    "url": "https://github.com/httpie/cli/issues/761",
+    "status": "closed",
+    "severity": "sev4",
+    "severity_score": 0.1,
+    "labels": [
+      "docs"
+    ],
+    "opened_at": "2021-09-01T10:00:00Z",
+    "closed_at": "2021-09-23T10:46:00Z",
+    "detection_source": "user_report",
+    "is_regression": false,
+    "resolution_commit_ids": [
+      "cae83b3f9e2077afee85992e8135cae70bb91cf3"
+    ],
+    "resolution_pr_numbers": [],
+    "fixed_in_version": "3.0.0",
+    "affected_files": [],
+    "observed_in": [],
+    "caused_by": [],
+    "related_incident_ids": []
+  },
+  {
+    "id": "psf/requests#issue-6730",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "manual:psf/requests#6730",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.55
+    },
+    "repository_id": "psf/requests",
+    "number": 6730,
+    "title": "Requests 2.32.3 no longer loads the system CA bundle into custom SSL contexts",
+    "body": "`requests.Session.verify` with a custom context stopped trusting system certificates. Deliberate change, slow to be reverted upstream because of security considerations.",
+    "url": "https://github.com/psf/requests/issues/6730",
+    "status": "mitigated",
+    "severity": "sev2",
+    "severity_score": 0.75,
+    "labels": [
+      "ssl",
+      "breaking-change"
+    ],
+    "opened_at": "2024-05-30T07:00:00Z",
+    "detection_source": "upstream_dependency",
+    "is_regression": true,
+    "resolution_commit_ids": [],
+    "resolution_pr_numbers": [],
+    "first_affected_version": "2.32.3",
+    "affected_files": [],
+    "observed_in": [
+      "psf/requests@2.32.3"
+    ],
+    "caused_by": [],
+    "related_incident_ids": []
+  },
+  {
+    "id": "httpie/cli#issue-1028",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "stub:git-reference:httpie/cli#issue-1028",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.2
+    },
+    "repository_id": "httpie/cli",
+    "number": 1028,
+    "title": "[stub] Show --check-status warning with --quiet as well. (#1026)",
+    "body": "Placeholder created because a commit or PR references this issue number but the issue itself was not curated in the fixtures. A real ingestion fills this node from the GitHub API.",
+    "url": "https://github.com/httpie/cli/issues/1028",
+    "status": "open",
+    "severity": "unknown",
+    "labels": [],
+    "detection_source": "unknown",
+    "is_regression": false,
+    "resolution_commit_ids": [],
+    "resolution_pr_numbers": [],
+    "affected_files": [],
+    "observed_in": [],
+    "caused_by": [],
+    "related_incident_ids": []
+  }
+]

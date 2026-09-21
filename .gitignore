@@ -1,0 +1,19 @@
+# Clones open-source utilisés pour l'audit (gros, ont leur propre .git)
+/click/
+/httpie-cli/
+/requests/
+
+# Python
+__pycache__/
+.venv/
+venv/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Secrets / config locale
+.env
+
+# OS
+Thumbs.db
+Desktop.ini

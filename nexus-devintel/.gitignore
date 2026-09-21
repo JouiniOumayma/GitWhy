@@ -1,0 +1,20 @@
+# Local configuration (never commit real credentials)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editors
+.idea/
+.vscode/
+
+# Local database dumps produced while experimenting
+*.dump
+*.sql.gz

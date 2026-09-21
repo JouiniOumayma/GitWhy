@@ -1,0 +1,148 @@
+# =====================================================================
+# NEXUS-DevIntel — local development stack
+#
+#   neo4j     : graph store (Knowledge Graph, APOC + GDS-ready)
+#   postgres  : vector store (pgvector) + ingestion ledger
+#
+# Quick start:
+#   cp .env.example .env
+#   docker compose up -d
+#   docker compose ps
+#   docker compose logs -f neo4j
+#
+# Neo4j Browser : http://localhost:7474   (bolt://localhost:7687)
+# pgAdmin/psql  : postgresql://nexus:nexus@localhost:5432/nexus
+#
+# Schema is applied automatically:
+#   - PostgreSQL : everything in ./schema/postgres is run on first boot
+#   - Neo4j      : ./schema/cypher is mounted but must be piped manually,
+#                  because Neo4j has no initdb equivalent. See README.md.
+# =====================================================================
+
+name: nexus-devintel
+
+services:
+  # ------------------------------------------------------------------ #
+  # Knowledge Graph
+  # ------------------------------------------------------------------ #
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: nexus-neo4j
+    restart: unless-stopped
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474" # Neo4j Browser
+      - "${NEO4J_BOLT_PORT:-7687}:7687" # Bolt protocol
+    environment:
+      # --- authentication -------------------------------------------- #
+      # NEO4J_AUTH only applies on a *fresh* volume: once the auth store
+      # exists, changing this value does nothing and the password must be
+      # changed with `ALTER CURRENT USER SET PASSWORD ...`. See README.md.
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:-user}"
+      # NOTE: do NOT add a bare `NEO4J_PASSWORD:` variable here. The image maps
+      # every NEO4J_* variable to a config key (NEO4J_PASSWORD -> `password`),
+      # and strict validation then aborts startup with
+      # "Unrecognized setting. No declared setting with name: PASSWORD".
+      # The healthcheck below derives the credentials from NEO4J_AUTH instead.
+      # --- dev-only password policy ----------------------------------- #
+      # Neo4j 5 defaults dbms.security.auth_minimum_password_length to 8.
+      # NEXUS-DevIntel lowers it to 4 so the local stack can use the short
+      # password in .env.example. This is a deliberate *local development*
+      # tradeoff: remove this line (and use a >= 8 character password) before
+      # exposing the instance to anything but localhost.
+      NEO4J_dbms_security_auth__minimum__password__length: "4"
+      # --- plugins ---------------------------------------------------- #
+      # APOC is downloaded on first boot: needs outbound network access.
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*,gds.*"
+      NEO4J_dbms_security_procedures_allowlist: "apoc.*,gds.*"
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+      NEO4J_apoc_import_file_use__neo4j__config: "true"
+      # apoc.path.expandConfig is what the agent uses to walk an EvidencePath.
+      # Bound the traversal with the transaction timeout below plus a
+      # `boundedSizeMax` / `maxLevel` parameter on the procedure itself.
+      # --- memory ----------------------------------------------------- #
+      # Keep the heap modest: this is a developer laptop, not a server.
+      NEO4J_server_memory_heap_initial__size: "${NEO4J_HEAP:-1G}"
+      NEO4J_server_memory_heap_max__size: "${NEO4J_HEAP:-1G}"
+      NEO4J_server_memory_pagecache_size: "${NEO4J_PAGECACHE:-512M}"
+      NEO4J_db_transaction_timeout: "60s"
+      # --- misc ------------------------------------------------------- #
+      NEO4J_server_databases_default__to__read__only: "false"
+      NEO4J_dbms_usage__report_enabled: "false"
+    volumes:
+      - neo4j_data:/data # graph + indexes (the important one)
+      - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
+      - neo4j_import:/import
+      # Mounted read-only so the Cypher files are visible inside the container.
+      - ./schema/cypher:/schema/cypher:ro
+    healthcheck:
+      # A container is "healthy" only once Cypher actually answers *with the
+      # credentials the host scripts use*, so a password mismatch is caught here
+      # rather than in the loader.
+      # Credentials are parsed from NEO4J_AUTH ("<user>/<password>"), so the
+      # healthcheck always probes the exact values the server was configured
+      # with. Assumes the single-user form of NEO4J_AUTH.
+      test:
+        [
+          "CMD-SHELL",
+          "cypher-shell -u \"$${NEO4J_AUTH%%/*}\" -p \"$${NEO4J_AUTH#*/}\" 'RETURN 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+    networks:
+      - nexus
+
+  # ------------------------------------------------------------------ #
+  # Vector store + relational side-car
+  # ------------------------------------------------------------------ #
+  postgres:
+    # Official pgvector image: PostgreSQL 16 + vector, pg_trgm, uuid-ossp.
+    image: pgvector/pgvector:pg16
+    container_name: nexus-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-nexus}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-nexus}"
+      POSTGRES_DB: "${POSTGRES_DB:-nexus}"
+      # Deterministic collation: embedding pipelines split text by words.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Every *.sql / *.sh here runs once, alphabetically, on an empty volume.
+      - ./schema/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$${POSTGRES_USER:-nexus}\" -d \"$${POSTGRES_DB:-nexus}\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - nexus
+
+volumes:
+  neo4j_data:
+    name: nexus_neo4j_data
+  neo4j_logs:
+    name: nexus_neo4j_logs
+  neo4j_plugins:
+    name: nexus_neo4j_plugins
+  neo4j_import:
+    name: nexus_neo4j_import
+  postgres_data:
+    name: nexus_postgres_data
+
+networks:
+  nexus:
+    name: nexus-net
+    driver: bridge

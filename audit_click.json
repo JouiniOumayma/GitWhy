@@ -1,0 +1,458 @@
+{
+  "repo": "C:\\Users\\oumay\\OneDrive\\Desktop\\veille\\click",
+  "name": "click",
+  "size_total_incl_git_mb": 7.81,
+  "size_worktree_mb": 1.64,
+  "python_files": 90,
+  "total_commits": 3362,
+  "merge_commits": 1200,
+  "non_merge_commits": 2162,
+  "commits_any_issue_or_pr_ref": 1297,
+  "pct_any_ref": 38.6,
+  "commits_with_closing_keyword": 149,
+  "pct_closing": 4.4,
+  "merge_pull_request_subjects": 597,
+  "squash_merge_subjects": 472,
+  "merges_with_closing_keyword": 11,
+  "merges_referencing_issue_in_body": 29,
+  "total_linked_commits": 1297,
+  "pct_linked": 38.6,
+  "unique_referenced_numbers": 1287,
+  "tags": 71,
+  "recent_tags": [
+    "8.5.0",
+    "8.4.2",
+    "8.4.1",
+    "8.4.0",
+    "8.3.3",
+    "8.3.2",
+    "8.3.1",
+    "8.3.0",
+    "8.2.2",
+    "8.2.1"
+  ],
+  "head_sha": "6aabf099bfdd",
+  "head_date": "2026-09-05T18:28:42-07:00",
+  "head_subject": "Stable (#3851)\n",
+  "first_commit_date": "2014-04-24T11:51:55+02:00",
+  "contributors": 472,
+  "import_graph": {
+    "package_roots": [
+      "examples",
+      "src"
+    ],
+    "internal_edges": 60,
+    "files_with_internal_imports": 16,
+    "files_depended_upon": 16,
+    "max_out_degree": [
+      "src/click/core.py",
+      10
+    ],
+    "avg_out_degree": 3.75,
+    "bidirectional_pairs": 9,
+    "impact_radius": {
+      "max_depth": 4,
+      "deepest_node": "src/click/_winconsole.py",
+      "max_blast_radius": 15,
+      "avg_blast_radius": 12.5,
+      "median_blast_radius": 12
+    },
+    "most_depended_upon": [
+      [
+        "src/click/_compat.py",
+        9
+      ],
+      [
+        "src/click/utils.py",
+        8
+      ],
+      [
+        "src/click/core.py",
+        8
+      ],
+      [
+        "src/click/exceptions.py",
+        7
+      ],
+      [
+        "src/click/globals.py",
+        6
+      ],
+      [
+        "src/click/shell_completion.py",
+        3
+      ],
+      [
+        "src/click/parser.py",
+        3
+      ],
+      [
+        "src/click/__init__.py",
+        3
+      ],
+      [
+        "src/click/decorators.py",
+        2
+      ],
+      [
+        "src/click/termui.py",
+        2
+      ]
+    ],
+    "most_importing": [
+      [
+        "src/click/core.py",
+        10
+      ],
+      [
+        "src/click/__init__.py",
+        9
+      ],
+      [
+        "src/click/termui.py",
+        7
+      ],
+      [
+        "src/click/types.py",
+        5
+      ],
+      [
+        "src/click/exceptions.py",
+        4
+      ],
+      [
+        "src/click/parser.py",
+        4
+      ],
+      [
+        "src/click/utils.py",
+        3
+      ],
+      [
+        "src/click/testing.py",
+        3
+      ],
+      [
+        "src/click/decorators.py",
+        3
+      ],
+      [
+        "src/click/_termui_impl.py",
+        3
+      ]
+    ],
+    "external_top": [
+      [
+        "click",
+        19
+      ],
+      [
+        "ctypes",
+        18
+      ],
+      [
+        "__future__",
+        17
+      ],
+      [
+        "collections",
+        17
+      ],
+      [
+        "gettext",
+        15
+      ],
+      [
+        "typing",
+        14
+      ],
+      [
+        "os",
+        12
+      ],
+      [
+        "sys",
+        10
+      ],
+      [
+        "contextlib",
+        9
+      ],
+      [
+        "warnings",
+        7
+      ],
+      [
+        "types",
+        6
+      ],
+      [
+        "shutil",
+        6
+      ],
+      [
+        "typing_extensions",
+        6
+      ],
+      [
+        "io",
+        5
+      ],
+      [
+        "subprocess",
+        5
+      ]
+    ],
+    "unresolved_internal": [],
+    "syntax_errors": [],
+    "edges": [
+      [
+        "src/click/__init__.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/decorators.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/exceptions.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/formatting.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/globals.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/parser.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/termui.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/types.py"
+      ],
+      [
+        "src/click/__init__.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/_compat.py",
+        "src/click/_winconsole.py"
+      ],
+      [
+        "src/click/_termui_impl.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/_termui_impl.py",
+        "src/click/exceptions.py"
+      ],
+      [
+        "src/click/_termui_impl.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/_textwrap.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/_winconsole.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/__init__.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/_utils.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/decorators.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/exceptions.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/formatting.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/globals.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/parser.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/shell_completion.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/termui.py"
+      ],
+      [
+        "src/click/core.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/decorators.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/decorators.py",
+        "src/click/globals.py"
+      ],
+      [
+        "src/click/decorators.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/exceptions.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/exceptions.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/exceptions.py",
+        "src/click/globals.py"
+      ],
+      [
+        "src/click/exceptions.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/formatting.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/formatting.py",
+        "src/click/_textwrap.py"
+      ],
+      [
+        "src/click/formatting.py",
+        "src/click/parser.py"
+      ],
+      [
+        "src/click/globals.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/parser.py",
+        "src/click/_utils.py"
+      ],
+      [
+        "src/click/parser.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/parser.py",
+        "src/click/exceptions.py"
+      ],
+      [
+        "src/click/parser.py",
+        "src/click/shell_completion.py"
+      ],
+      [
+        "src/click/shell_completion.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/shell_completion.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/termui.py",
+        "src/click/__init__.py"
+      ],
+      [
+        "src/click/termui.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/termui.py",
+        "src/click/_termui_impl.py"
+      ],
+      [
+        "src/click/termui.py",
+        "src/click/exceptions.py"
+      ],
+      [
+        "src/click/termui.py",
+        "src/click/globals.py"
+      ],
+      [
+        "src/click/termui.py",
+        "src/click/types.py"
+      ],
+      [
+        "src/click/termui.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/testing.py",
+        "src/click/__init__.py"
+      ],
+      [
+        "src/click/testing.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/testing.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/types.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/types.py",
+        "src/click/core.py"
+      ],
+      [
+        "src/click/types.py",
+        "src/click/exceptions.py"
+      ],
+      [
+        "src/click/types.py",
+        "src/click/shell_completion.py"
+      ],
+      [
+        "src/click/types.py",
+        "src/click/utils.py"
+      ],
+      [
+        "src/click/utils.py",
+        "src/click/_compat.py"
+      ],
+      [
+        "src/click/utils.py",
+        "src/click/exceptions.py"
+      ],
+      [
+        "src/click/utils.py",
+        "src/click/globals.py"
+      ]
+    ]
+  },
+  "import_graph_scope": "source only (tests excluded)",
+  "python_files_by_dir": {
+    "tests": 58,
+    "src": 17,
+    "examples": 14,
+    "docs": 1
+  }
+}

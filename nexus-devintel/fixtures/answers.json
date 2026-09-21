@@ -1,0 +1,354 @@
+[
+  {
+    "id": "ans-2026-09-18-0001",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:langgraph:ans-2026-09-18-0001",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.6
+    },
+    "question": "Pourquoi les connexions HTTPS échouaient-elles dans HTTPie 3.2.2 et qu'est-ce qui les a corrigées ?",
+    "intent": "root_cause",
+    "answer_text": "**Cause racine** : `requests >= 2.32.3` a cessé de charger le bundle de certificats système dans les `SSLContext` fournis par l'appelant (psf/requests#6730).\n\n**Chemin de preuve** : Incident `httpie/cli#issue-1583` → Commit `7f03c52` (contournement : épinglage de `requests==2.31.0`, livré dans 3.2.3) → PR `#1596` → Commit `fd30c4e` (correctif réel dans `httpie/ssl_.py`) → Deployment `httpie/cli@3.2.4`.\n\n**Point de vigilance** : le commit `7f03c52` a corrigé le symptôme sans PR ; le lien Incident→PR n'existe que via le titre de la PR #1596, d'où une confiance de 0.6 sur cette arête.",
+    "status": "ok",
+    "repository_id": "httpie/cli",
+    "confidence_score": 0.86,
+    "confidence_band": "high",
+    "confidence_breakdown": {
+      "graph_coverage": 0.95,
+      "path_length_penalty": -0.06,
+      "link_confidence_weighted": 0.62,
+      "deployment_corroboration": 0.9,
+      "contradiction_penalty": 0.0
+    },
+    "evidence_path": {
+      "path_id": "ans-2026-09-18-0001",
+      "intent": "root_cause",
+      "hops": [
+        {
+          "step": 0,
+          "node_kind": "Incident",
+          "node_id": "httpie/cli#issue-1583",
+          "role": "symptom",
+          "score": 0.9,
+          "rationale": "hop 0: symptom"
+        },
+        {
+          "step": 1,
+          "node_kind": "Commit",
+          "node_id": "fd30c4ef6230a927f9dcfad6301c40e8bf846156",
+          "relation_in": "CLOSES",
+          "role": "fix",
+          "score": 0.95,
+          "rationale": "hop 1: fix"
+        },
+        {
+          "step": 2,
+          "node_kind": "File",
+          "node_id": "httpie/cli::httpie/ssl_.py",
+          "relation_in": "MODIFIES",
+          "role": "root_cause",
+          "score": 0.93,
+          "rationale": "hop 2: root_cause"
+        },
+        {
+          "step": 3,
+          "node_kind": "PR",
+          "node_id": "httpie/cli#1596",
+          "relation_in": "MERGED_INTO",
+          "role": "fix",
+          "score": 0.8,
+          "rationale": "hop 3: fix"
+        },
+        {
+          "step": 4,
+          "node_kind": "Deployment",
+          "node_id": "httpie/cli@3.2.4",
+          "relation_in": "DEPLOYED_AT",
+          "role": "timeline",
+          "score": 0.85,
+          "rationale": "hop 4: timeline"
+        },
+        {
+          "step": 5,
+          "node_kind": "Incident",
+          "node_id": "psf/requests#issue-6730",
+          "relation_in": "CAUSED_BY",
+          "role": "root_cause",
+          "score": 0.88,
+          "rationale": "hop 5: root_cause"
+        }
+      ],
+      "score": 0.86,
+      "total_hops": 6,
+      "is_valid": true,
+      "cycle_detected": false,
+      "validation_notes": [
+        "Every hop resolved against the graph."
+      ]
+    },
+    "evidence_ids": [
+      "ev-1583-01",
+      "ev-1583-02",
+      "ev-1583-03",
+      "ev-1583-05",
+      "ev-1583-04"
+    ],
+    "citations": [
+      {
+        "label": "httpie/ssl_.py",
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/ssl_.py",
+        "url": "https://github.com/httpie/cli/pull/1596"
+      },
+      {
+        "label": "commit fd30c4e",
+        "node_kind": "Commit",
+        "node_id": "fd30c4ef6230a927f9dcfad6301c40e8bf846156",
+        "url": "https://github.com/httpie/cli/commit/fd30c4e"
+      },
+      {
+        "label": "psf/requests#6730",
+        "node_kind": "Incident",
+        "node_id": "psf/requests#issue-6730",
+        "url": "https://github.com/psf/requests/issues/6730"
+      }
+    ],
+    "suggested_actions": [
+      "Épingler requests<2.32.3 en attendant la sortie de 3.2.4 (fait dans 7f03c52).",
+      "Ajouter un test de régression sur create_ssl_context() avec un CA bundle custom."
+    ],
+    "model": "gpt-4.1-mini",
+    "prompt_version": "nexus-agent-v0.1.0",
+    "latency_ms": 4210,
+    "token_usage": {
+      "prompt": 3120,
+      "completion": 480
+    },
+    "tool_calls": 7,
+    "created_at": "2026-09-18T10:00:00Z",
+    "graph_snapshot_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ans-2026-09-18-0002",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:langgraph:ans-2026-09-18-0002",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.6
+    },
+    "question": "Quel est l'impact d'une modification de httpie/context.py ?",
+    "intent": "change_impact",
+    "answer_text": "`httpie/context.py` est un nœud à fort couplage : **22 dépendants directs**, **37 fichiers atteints de façon transitive**, profondeur **3**. Les dépendants critiques sont `httpie/cli/argparser.py` (chaque invocation CLI le traverse), `httpie/client.py` et `httpie/core.py` (le pipeline requête/réponse), `httpie/output/writer.py` (le formatage de sortie) et `httpie/manager/tasks/plugins.py` (le CLI d'administration). `tests/test_sessions.py` est aussi impacté : un changement ici ne se limite pas au code de production.",
+    "status": "ok",
+    "repository_id": "httpie/cli",
+    "confidence_score": 0.78,
+    "confidence_band": "high",
+    "confidence_breakdown": {
+      "graph_coverage": 0.92,
+      "path_length_penalty": -0.05,
+      "metrics_freshness": 0.95,
+      "unresolved_imports_penalty": -0.09
+    },
+    "evidence_path": {
+      "path_id": "ans-2026-09-18-0002",
+      "intent": "change_impact",
+      "hops": [
+        {
+          "step": 0,
+          "node_kind": "File",
+          "node_id": "httpie/cli::httpie/context.py",
+          "role": "blast_radius",
+          "score": 0.9,
+          "rationale": "hop 0: blast_radius"
+        },
+        {
+          "step": 1,
+          "node_kind": "File",
+          "node_id": "httpie/cli::httpie/cli/argparser.py",
+          "relation_in": "IMPORTS",
+          "role": "blast_radius",
+          "score": 0.9,
+          "rationale": "hop 1: blast_radius"
+        },
+        {
+          "step": 2,
+          "node_kind": "File",
+          "node_id": "httpie/cli::httpie/manager/cli.py",
+          "relation_in": "IMPORTS",
+          "role": "blast_radius",
+          "score": 0.75,
+          "rationale": "hop 2: blast_radius"
+        }
+      ],
+      "score": 0.78,
+      "total_hops": 3,
+      "is_valid": true,
+      "cycle_detected": false,
+      "validation_notes": [
+        "Every hop resolved against the graph."
+      ]
+    },
+    "evidence_ids": [
+      "ev-ctx-01",
+      "ev-ctx-02",
+      "ev-ctx-03"
+    ],
+    "citations": [
+      {
+        "label": "httpie/context.py",
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/context.py"
+      },
+      {
+        "label": "httpie/cli/argparser.py",
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/cli/argparser.py"
+      }
+    ],
+    "suggested_actions": [
+      "Lancer tests/test_sessions.py : c'est le seul fichier de tests présent dans le rayon d'impact ingéré.",
+      "Vérifier les imports paresseux (httpie/context.py:194, httpie/cli/argparser.py:270, 562, 577) qui masquent le couplage réel."
+    ],
+    "model": "gpt-4.1-mini",
+    "prompt_version": "nexus-agent-v0.1.0",
+    "latency_ms": 2380,
+    "token_usage": {
+      "prompt": 3120,
+      "completion": 480
+    },
+    "tool_calls": 4,
+    "created_at": "2026-09-18T10:00:00Z",
+    "graph_snapshot_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ans-2026-09-18-0003",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:langgraph:ans-2026-09-18-0003",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.6
+    },
+    "question": "Quel fichier du graphe d'imports est le plus profond, et pourquoi est-ce risqué de le modifier ?",
+    "intent": "change_impact",
+    "answer_text": "`httpie/output/ui/__init__.py` est à la profondeur maximale du graphe (7 sauts). Il est importé paresseusement par `httpie/cli/argparser.py` (lignes 562 et 577), donc une erreur d'import n'apparaît qu'au moment où l'utilisateur demande `--help`, pas au démarrage.",
+    "status": "ok",
+    "repository_id": "httpie/cli",
+    "confidence_score": 0.66,
+    "confidence_band": "medium",
+    "confidence_breakdown": {
+      "graph_coverage": 0.8,
+      "path_length_penalty": -0.14,
+      "lazy_import_penalty": -0.05
+    },
+    "evidence_path": {
+      "path_id": "ans-2026-09-18-0003",
+      "intent": "change_impact",
+      "hops": [
+        {
+          "step": 0,
+          "node_kind": "File",
+          "node_id": "httpie/cli::httpie/output/ui/__init__.py",
+          "role": "context",
+          "score": 0.7,
+          "rationale": "hop 0: context"
+        },
+        {
+          "step": 1,
+          "node_kind": "File",
+          "node_id": "httpie/cli::httpie/output/ui/palette.py",
+          "relation_in": "IMPORTS",
+          "role": "context",
+          "score": 0.72,
+          "rationale": "hop 1: context"
+        }
+      ],
+      "score": 0.66,
+      "total_hops": 2,
+      "is_valid": true,
+      "cycle_detected": false,
+      "validation_notes": [
+        "Every hop resolved against the graph."
+      ]
+    },
+    "evidence_ids": [
+      "ev-ui-01",
+      "ev-ui-02"
+    ],
+    "citations": [
+      {
+        "label": "httpie/output/ui/__init__.py",
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/output/ui/__init__.py"
+      }
+    ],
+    "suggested_actions": [
+      "Ajouter un test d'import du module `--help` pour couvrir le chemin paresseux."
+    ],
+    "model": "gpt-4.1-mini",
+    "prompt_version": "nexus-agent-v0.1.0",
+    "latency_ms": 1720,
+    "token_usage": {
+      "prompt": 3120,
+      "completion": 480
+    },
+    "tool_calls": 3,
+    "created_at": "2026-09-18T10:00:00Z",
+    "graph_snapshot_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ans-2026-09-18-0004",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:langgraph:ans-2026-09-18-0004",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.6
+    },
+    "question": "Pourquoi tests/test_sessions.py échoue-t-il sur la branche feature/xyz ?",
+    "intent": "root_cause",
+    "answer_text": "Le graphe ne contient pas la branche `feature/xyz` ni l'exécution CI concernée : aucune preuve exploitable. L'ingestion doit couvrir `refs/heads/*` et les runs CI avant que ce type de question soit répondable.",
+    "status": "insufficient_evidence",
+    "repository_id": "httpie/cli",
+    "confidence_score": 0.12,
+    "confidence_band": "low",
+    "confidence_breakdown": {
+      "graph_coverage": 0.1,
+      "missing_scope_penalty": -0.8
+    },
+    "evidence_path": {
+      "path_id": "ans-2026-09-18-0004",
+      "intent": "root_cause",
+      "hops": [],
+      "score": 0.12,
+      "total_hops": 0,
+      "is_valid": false,
+      "cycle_detected": false,
+      "validation_notes": [
+        "No hop could be resolved: nothing to validate."
+      ]
+    },
+    "evidence_ids": [],
+    "citations": [],
+    "suggested_actions": [
+      "Étendre l'ingestion aux branches et aux runs CI (§ Semaine 2)."
+    ],
+    "model": "gpt-4.1-mini",
+    "prompt_version": "nexus-agent-v0.1.0",
+    "latency_ms": 640,
+    "token_usage": {
+      "prompt": 3120,
+      "completion": 480
+    },
+    "tool_calls": 2,
+    "created_at": "2026-09-18T10:00:00Z",
+    "graph_snapshot_at": "2026-09-18T00:00:00Z"
+  }
+]

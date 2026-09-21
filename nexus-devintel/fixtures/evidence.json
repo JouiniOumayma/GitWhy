@@ -1,0 +1,382 @@
+[
+  {
+    "id": "ev-1583-01",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-1583-01",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0001",
+    "kind": "node",
+    "retrieval_strategy": "lexical",
+    "score": 0.9,
+    "rank": 1,
+    "text": "Incident httpie/cli#issue-1583: HTTPS requests fail after requests 2.32.3: certificate verify failed. sev1, regression, opened 2024-06-28.",
+    "rationale": "Retrieved with lexical at hop 0.",
+    "hop_index": 0,
+    "path_id": "ans-2026-09-18-0001",
+    "node_references": [
+      {
+        "node_kind": "Incident",
+        "node_id": "httpie/cli#issue-1583",
+        "role": "symptom",
+        "hop_index": 0,
+        "rationale": "Incident httpie/cli#issue-1583: HTTPS requests fail after requests 2"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-1583-01",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-1583-02",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-1583-02",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0001",
+    "kind": "commit_diff",
+    "retrieval_strategy": "graph_traversal",
+    "score": 0.95,
+    "rank": 2,
+    "text": "Commit fd30c4e 'Explicitly load default certificates when creating SSL context (#1583) (#1596)' modifies httpie/ssl_.py (+7/-0) and setup.cfg (+1/-1).",
+    "rationale": "Retrieved with graph_traversal at hop 1.",
+    "hop_index": 1,
+    "path_id": "ans-2026-09-18-0001",
+    "node_references": [
+      {
+        "node_kind": "Commit",
+        "node_id": "fd30c4ef6230a927f9dcfad6301c40e8bf846156",
+        "role": "context",
+        "hop_index": 1,
+        "rationale": "Commit fd30c4e 'Explicitly load default certificates when creating SSL context (#1583) (#1596)' modifies httpie/ssl_"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-1583-02",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-1583-03",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-1583-03",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0001",
+    "kind": "node",
+    "retrieval_strategy": "hybrid",
+    "score": 0.93,
+    "rank": 3,
+    "text": "httpie/ssl_.py: create_ssl_context() is the single place where HTTPie builds an SSLContext; it is the root cause of the certificate regression.",
+    "rationale": "Retrieved with hybrid at hop 2.",
+    "hop_index": 2,
+    "path_id": "ans-2026-09-18-0001",
+    "node_references": [
+      {
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/ssl_.py",
+        "role": "root_cause",
+        "hop_index": 2,
+        "rationale": "httpie/ssl_"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-1583-03",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-1583-04",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-1583-04",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0001",
+    "kind": "deployment_window",
+    "retrieval_strategy": "temporal",
+    "score": 0.8,
+    "rank": 4,
+    "text": "Deployment httpie/cli@3.2.4 (2024-11-01) points at 2105caa and fixes the incident; the previous deployment 3.2.3 was the workaround release.",
+    "rationale": "Retrieved with temporal at hop 3.",
+    "hop_index": 3,
+    "path_id": "ans-2026-09-18-0001",
+    "node_references": [
+      {
+        "node_kind": "Deployment",
+        "node_id": "httpie/cli@3.2.4",
+        "role": "root_cause",
+        "hop_index": 3,
+        "rationale": "Deployment httpie/cli@3"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-1583-04",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-1583-05",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-1583-05",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "psf/requests",
+    "answer_id": "ans-2026-09-18-0001",
+    "kind": "node",
+    "retrieval_strategy": "graph_traversal",
+    "score": 0.88,
+    "rank": 3,
+    "text": "Upstream incident psf/requests#issue-6730: requests 2.32.3 stopped loading the system CA bundle into custom SSL contexts.",
+    "rationale": "Retrieved with graph_traversal at hop 2.",
+    "hop_index": 2,
+    "path_id": "ans-2026-09-18-0001",
+    "node_references": [
+      {
+        "node_kind": "Incident",
+        "node_id": "psf/requests#issue-6730",
+        "role": "root_cause",
+        "hop_index": 2,
+        "rationale": "Upstream incident psf/requests#issue-6730: requests 2"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-1583-05",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-ctx-01",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-ctx-01",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0002",
+    "kind": "node",
+    "retrieval_strategy": "vector_similarity",
+    "score": 0.82,
+    "rank": 1,
+    "text": "httpie/context.py holds the Environment object: config loading, output formatting, and the request/response pipeline state.",
+    "rationale": "Retrieved with vector_similarity at hop 0.",
+    "hop_index": 0,
+    "path_id": "ans-2026-09-18-0002",
+    "node_references": [
+      {
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/context.py",
+        "role": "context",
+        "hop_index": 0,
+        "rationale": "httpie/context"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-ctx-01",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-ctx-02",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-ctx-02",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0002",
+    "kind": "import_edge",
+    "retrieval_strategy": "graph_traversal",
+    "score": 0.9,
+    "rank": 2,
+    "text": "httpie/cli/argparser.py -> httpie/context.py (:IMPORTS). Direct dependent.",
+    "rationale": "Retrieved with graph_traversal at hop 1.",
+    "hop_index": 1,
+    "path_id": "ans-2026-09-18-0002",
+    "node_references": [
+      {
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/cli/argparser.py",
+        "role": "context",
+        "hop_index": 1,
+        "rationale": "httpie/cli/argparser"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-ctx-02",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-ctx-03",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-ctx-03",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0002",
+    "kind": "graph_path",
+    "retrieval_strategy": "graph_traversal",
+    "score": 0.75,
+    "rank": 3,
+    "text": "httpie/manager/cli.py -> httpie/cli/argparser.py -> httpie/context.py is the 2-hop chain: the manager CLI ('httpie' command) reaches Environment through the argparser.",
+    "rationale": "Retrieved with graph_traversal at hop 2.",
+    "hop_index": 2,
+    "path_id": "ans-2026-09-18-0002",
+    "node_references": [
+      {
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/manager/cli.py",
+        "role": "root_cause",
+        "hop_index": 2,
+        "rationale": "httpie/manager/cli"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-ctx-03",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-ui-01",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-ui-01",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0003",
+    "kind": "node",
+    "retrieval_strategy": "graph_traversal",
+    "score": 0.7,
+    "rank": 1,
+    "text": "httpie/output/ui/__init__.py is the deepest node of the import graph max depth 7; it is imported lazily by httpie/cli/argparser.py.",
+    "rationale": "Retrieved with graph_traversal at hop 0.",
+    "hop_index": 0,
+    "path_id": "ans-2026-09-18-0003",
+    "node_references": [
+      {
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/output/ui/__init__.py",
+        "role": "context",
+        "hop_index": 0,
+        "rationale": "httpie/output/ui/__init__"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-ui-01",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  },
+  {
+    "id": "ev-ui-02",
+    "provenance": {
+      "source": "synthetic_fixture",
+      "source_uri": "agent:retrieval:ev-ui-02",
+      "ingested_at": "2026-09-18T00:00:00Z",
+      "extractor": "nexus-devintel.fixtures.build_fixtures",
+      "extractor_version": "0.1.0",
+      "confidence": 0.7
+    },
+    "repository_id": "httpie/cli",
+    "answer_id": "ans-2026-09-18-0003",
+    "kind": "graph_path",
+    "retrieval_strategy": "graph_traversal",
+    "score": 0.72,
+    "rank": 2,
+    "text": "httpie/output/ui/palette.py -> httpie/context.py is part of the chain that gives httpie/output/ui its depth.",
+    "rationale": "Retrieved with graph_traversal at hop 1.",
+    "hop_index": 1,
+    "path_id": "ans-2026-09-18-0003",
+    "node_references": [
+      {
+        "node_kind": "File",
+        "node_id": "httpie/cli::httpie/output/ui/palette.py",
+        "role": "context",
+        "hop_index": 1,
+        "rationale": "httpie/output/ui/palette"
+      }
+    ],
+    "derived_from": [],
+    "vector": {
+      "table": "evidence_embeddings",
+      "row_id": "ev-ui-02",
+      "model": "BAAI/bge-m3",
+      "dim": 1024
+    },
+    "retrieved_at": "2026-09-18T00:00:00Z"
+  }
+]

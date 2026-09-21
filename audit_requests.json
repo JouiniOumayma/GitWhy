@@ -1,0 +1,505 @@
+{
+  "repo": "C:\\Users\\oumay\\OneDrive\\Desktop\\veille\\requests",
+  "name": "requests",
+  "size_total_incl_git_mb": 19.18,
+  "size_worktree_mb": 4.45,
+  "python_files": 37,
+  "total_commits": 6494,
+  "merge_commits": 1612,
+  "non_merge_commits": 4882,
+  "commits_any_issue_or_pr_ref": 1830,
+  "pct_any_ref": 28.2,
+  "commits_with_closing_keyword": 182,
+  "pct_closing": 2.8,
+  "merge_pull_request_subjects": 1255,
+  "squash_merge_subjects": 218,
+  "merges_with_closing_keyword": 37,
+  "merges_referencing_issue_in_body": 98,
+  "total_linked_commits": 1830,
+  "pct_linked": 28.2,
+  "unique_referenced_numbers": 1761,
+  "tags": 162,
+  "recent_tags": [
+    "v2.34.2",
+    "v2.34.1",
+    "v2.34.0",
+    "v2.34.0.dev1",
+    "v2.33.1",
+    "v2.33.0",
+    "v2.32.5",
+    "v2.32.4",
+    "v2.32.3",
+    "v2.32.2"
+  ],
+  "head_sha": "dae7ef63b4df",
+  "head_date": "2026-09-02T12:15:52-06:00",
+  "head_subject": "Bump https://github.com/astral-sh/ruff-pre-commit (#7616)\n",
+  "first_commit_date": "2011-02-13T13:41:18-05:00",
+  "contributors": 804,
+  "import_graph": {
+    "package_roots": [
+      "src"
+    ],
+    "internal_edges": 72,
+    "files_with_internal_imports": 16,
+    "files_depended_upon": 16,
+    "max_out_degree": [
+      "src/requests/sessions.py",
+      13
+    ],
+    "avg_out_degree": 4.5,
+    "bidirectional_pairs": 10,
+    "impact_radius": {
+      "max_depth": 3,
+      "deepest_node": "src/requests/structures.py",
+      "max_blast_radius": 16,
+      "avg_blast_radius": 11.62,
+      "median_blast_radius": 11
+    },
+    "most_depended_upon": [
+      [
+        "src/requests/models.py",
+        10
+      ],
+      [
+        "src/requests/compat.py",
+        10
+      ],
+      [
+        "src/requests/__init__.py",
+        7
+      ],
+      [
+        "src/requests/structures.py",
+        6
+      ],
+      [
+        "src/requests/cookies.py",
+        6
+      ],
+      [
+        "src/requests/_internal_utils.py",
+        5
+      ],
+      [
+        "src/requests/exceptions.py",
+        5
+      ],
+      [
+        "src/requests/utils.py",
+        4
+      ],
+      [
+        "src/requests/_types.py",
+        4
+      ],
+      [
+        "src/requests/auth.py",
+        4
+      ]
+    ],
+    "most_importing": [
+      [
+        "src/requests/sessions.py",
+        13
+      ],
+      [
+        "src/requests/models.py",
+        11
+      ],
+      [
+        "src/requests/utils.py",
+        9
+      ],
+      [
+        "src/requests/adapters.py",
+        9
+      ],
+      [
+        "src/requests/__init__.py",
+        6
+      ],
+      [
+        "src/requests/auth.py",
+        5
+      ],
+      [
+        "src/requests/cookies.py",
+        4
+      ],
+      [
+        "src/requests/_types.py",
+        4
+      ],
+      [
+        "src/requests/hooks.py",
+        2
+      ],
+      [
+        "src/requests/api.py",
+        2
+      ]
+    ],
+    "external_top": [
+      [
+        "urllib3",
+        24
+      ],
+      [
+        "typing",
+        16
+      ],
+      [
+        "__future__",
+        13
+      ],
+      [
+        "collections",
+        12
+      ],
+      [
+        "http",
+        8
+      ],
+      [
+        "sys",
+        7
+      ],
+      [
+        "os",
+        5
+      ],
+      [
+        "warnings",
+        4
+      ],
+      [
+        "typing_extensions",
+        4
+      ],
+      [
+        "io",
+        4
+      ],
+      [
+        "chardet",
+        3
+      ],
+      [
+        "re",
+        3
+      ],
+      [
+        "time",
+        3
+      ],
+      [
+        "json",
+        3
+      ],
+      [
+        "pygments",
+        2
+      ]
+    ],
+    "unresolved_internal": [],
+    "syntax_errors": [],
+    "edges": [
+      [
+        "src/requests/__init__.py",
+        "src/requests/__version__.py"
+      ],
+      [
+        "src/requests/__init__.py",
+        "src/requests/api.py"
+      ],
+      [
+        "src/requests/__init__.py",
+        "src/requests/exceptions.py"
+      ],
+      [
+        "src/requests/__init__.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/__init__.py",
+        "src/requests/sessions.py"
+      ],
+      [
+        "src/requests/__init__.py",
+        "src/requests/status_codes.py"
+      ],
+      [
+        "src/requests/_internal_utils.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/_types.py",
+        "src/requests/auth.py"
+      ],
+      [
+        "src/requests/_types.py",
+        "src/requests/cookies.py"
+      ],
+      [
+        "src/requests/_types.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/_types.py",
+        "src/requests/structures.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/__init__.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/_types.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/auth.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/cookies.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/exceptions.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/structures.py"
+      ],
+      [
+        "src/requests/adapters.py",
+        "src/requests/utils.py"
+      ],
+      [
+        "src/requests/api.py",
+        "src/requests/__init__.py"
+      ],
+      [
+        "src/requests/api.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/auth.py",
+        "src/requests/_internal_utils.py"
+      ],
+      [
+        "src/requests/auth.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/auth.py",
+        "src/requests/cookies.py"
+      ],
+      [
+        "src/requests/auth.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/auth.py",
+        "src/requests/utils.py"
+      ],
+      [
+        "src/requests/cookies.py",
+        "src/requests/_internal_utils.py"
+      ],
+      [
+        "src/requests/cookies.py",
+        "src/requests/_types.py"
+      ],
+      [
+        "src/requests/cookies.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/cookies.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/exceptions.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/exceptions.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/help.py",
+        "src/requests/__init__.py"
+      ],
+      [
+        "src/requests/hooks.py",
+        "src/requests/__init__.py"
+      ],
+      [
+        "src/requests/hooks.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/__init__.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/_internal_utils.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/adapters.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/auth.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/cookies.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/exceptions.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/hooks.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/status_codes.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/structures.py"
+      ],
+      [
+        "src/requests/models.py",
+        "src/requests/utils.py"
+      ],
+      [
+        "src/requests/packages.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/__init__.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/_internal_utils.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/_types.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/adapters.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/auth.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/cookies.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/exceptions.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/hooks.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/status_codes.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/structures.py"
+      ],
+      [
+        "src/requests/sessions.py",
+        "src/requests/utils.py"
+      ],
+      [
+        "src/requests/status_codes.py",
+        "src/requests/structures.py"
+      ],
+      [
+        "src/requests/structures.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/__init__.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/__version__.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/_internal_utils.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/_types.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/compat.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/cookies.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/exceptions.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/models.py"
+      ],
+      [
+        "src/requests/utils.py",
+        "src/requests/structures.py"
+      ]
+    ]
+  },
+  "import_graph_scope": "source only (tests excluded)",
+  "python_files_by_dir": {
+    "src": 19,
+    "tests": 15,
+    "docs": 2,
+    "(root)": 1
+  }
+}
