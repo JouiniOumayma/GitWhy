@@ -257,6 +257,88 @@ Deux scénarios sont prêts pour la démo : la chaîne de root cause
 → @3.2.4`, et le rayon d'impact de `httpie/context.py` (22 dépendants directs,
 37 fichiers atteints).
 
+## Phase 2 (branche `personne-b/retrieval-root-cause`)
+
+### 1. Indexation vectorielle sur fixtures (`ingestion/embedding_indexer.py`)
+
+Le pipeline complet fixtures → chunks → embeddings → `code_chunks`, prouvé de
+bout en bout sur des données factices :
+
+```bash
+# a) plan de chunking sans base de données
+python scripts/index_embeddings.py --dry-run
+
+# b) smoke test SQL avec vecteurs de hachage déterministes (offline)
+python scripts/index_embeddings.py --mock-embeddings
+
+# c) la vraie indexation bge-m3 (pip install -r requirements-embeddings.txt)
+python scripts/index_embeddings.py
+```
+
+Design : ids de chunk conformes au schéma (`repo::path#L<s>-L<e>`), provenance
+de la fixture portée par chunk (`metadata` jsonb : `prov_source`,
+`prov_confidence`), UPSERT idempotent sur `(file_id, start_line, end_line)`
+gardé par `content_hash`, ledger `ingestion_runs` par exécution. Un incident
+synthétique (`prov_confidence = 0.2`) ne pèse donc pas comme un objet git.
+
+### 2. Enrichissement GraphQL `closingIssuesReferences` (`ingestion/github_graphql.py`)
+
+Git ne stocke pas « cette PR a fermé cette issue » ; cette relation vit côté
+serveur. Le client GraphQL (stdlib-only, `GITHUB_TOKEN` requis) la récupère et
+produit les arêtes `(:PR)-[:CLOSES]->(:Incident)` avec
+`link_method = graphql_closing_issues_reference` et `confidence = 1.0` :
+
+```bash
+# dry-run : liste les arêtes sans rien écrire (token requis)
+python scripts/enrich_graphql.py httpie/cli --dry-run
+
+# pass complet (~3 requêtes GraphQL pour ~280 PRs), MERGE idempotent
+python scripts/enrich_graphql.py httpie/cli
+
+# re-run ciblé, offline : compteurs factices
+python scripts/enrich_graphql.py httpie/cli --pr 1596
+python scripts/enrich_graphql.py httpie/cli --mock
+```
+
+Lecture seule garantie : la requête est une constante de module (paramètres
+liés, jamais interpolés) et `_guard_read_only()` refuse tout payload contenant
+`mutation` **avant** le transport. Les issues inconnues reçoivent des nœuds
+stub `(:Incident)` pour que les arêtes `:CLOSES` se résolvent au lieu d'être
+silencieusement ignorées.
+
+### 3. Root Cause + retrieval hybride (`retrieval/root_cause.py`, `retrieval/hybrid.py`)
+
+`RootCauseAnalyzer` suit le pattern exact de `ChangeImpactAnalyzer` : traversée
+bornée autour de l'incident (`CLOSES|MERGED_INTO|MODIFIES|DEPLOYED_AT|OBSERVED_IN|
+AFFECTS|TOUCHES|DEPLOYED_AS*1..N`), un `EvidenceHop` par nœud atteint, score =
+produit des confiances d'arêtes × décroissance 0.85^distance, rôles
+symptom → fix → root_cause → timeline :
+
+```bash
+python scripts/root_cause.py httpie/cli#issue-1583
+python scripts/root_cause.py httpie/cli#issue-1583 --write
+
+# graphe + vecteurs : ajoute les preuves hybrid_search_code_chunks
+python scripts/root_cause.py httpie/cli#issue-1583 --hybrid \
+    --hybrid-query "SSL certificate verify failed" --hybrid-mock-embeddings
+```
+
+`HybridRetriever` appelle la fonction SQL existante
+`hybrid_search_code_chunks` (fusion par rang réciproque lexical + HNSW),
+refuse toute dérive de dimension vs `vector(1024)`, et ancre chaque chunk vers
+son nœud de graphe (`File` / `Commit` / `Incident`).
+
+### 4. Garde-fous lecture seule (démo jury)
+
+```bash
+python -m pytest tests/test_security.py -v
+```
+
+Chaque test est une tentative d'attaque bloquée : payload `mutation` GraphQL
+rejeté avant tout octet réseau, label/relation Neo4j injectée refusée par la
+whitelist du `GraphWriter`, surface PostgreSQL vérifiée SELECT-only, aucune
+méthode mutante sur les clients.
+
 ## Roadmap
 
 | Semaine | Suite |
