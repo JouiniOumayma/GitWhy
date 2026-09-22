@@ -51,6 +51,8 @@ def _load_dotenv(path: Path) -> None:
 def _print_stats(stats: EnrichmentStats) -> None:
     print(f"  PRs seen                  : {stats.prs_seen}")
     print(f"  PRs with closing issues   : {stats.prs_with_closing_issues}")
+    print(f"  (:PR) stubs created       : {stats.prs_created}")
+    print(f"  (:PR)-[:MERGED_INTO]      : {stats.merge_edges_built}")
     print(f"  (:PR)-[:CLOSES] written   : {stats.edges_built}")
     print(f"  incidents discovered      : {len(stats.incidents_discovered or set())}")
 
@@ -82,6 +84,9 @@ def main() -> int:
                         help="restrict the pass to one PR number (repeatable)")
     parser.add_argument("--no-create-incidents", action="store_true",
                         help="do not create stub (:Incident) nodes for unknown issues")
+    parser.add_argument("--no-create-prs", action="store_true",
+                        help="do not create stub (:PR) nodes for unknown PRs "
+                             "(edges whose PR is missing will be skipped)")
     parser.add_argument("--dry-run", action="store_true",
                         help="fetch and report, but write nothing (needs a token)")
     parser.add_argument("--mock", action="store_true",
@@ -132,6 +137,7 @@ def main() -> int:
         stats = enricher.enrich(
             args.repository_id,
             create_incidents=not args.no_create_incidents,
+            create_prs=not args.no_create_prs,
             pr_numbers=args.pr,
         )
     print(f"== GraphQL enrichment of {args.repository_id} ==")

@@ -71,7 +71,9 @@ query($owner: String!, $name: String!, $cursor: String) {
         number
         title
         url
+        state
         closedAt
+        mergeCommit { oid }
         closingIssuesReferences(first: 50) {
           totalCount
           nodes { number title url closedAt }
@@ -144,6 +146,10 @@ class PullRequestLinks:
     url: str | None
     closed_at: str | None
     closing_issues: list[ClosingIssue]
+    #: ``OPEN`` / ``CLOSED`` / ``MERGED`` as returned by GraphQL.
+    state: str | None = None
+    #: SHA the PR landed as (squash/merge commit), when GitHub exposes one.
+    merge_commit_sha: str | None = None
 
 
 def build_issue_links(pr: PullRequestLinks, repository_id: str) -> list[IssueLink]:
@@ -212,6 +218,8 @@ class EnrichmentStats:
     prs_with_closing_issues: int = 0
     edges_built: int = 0
     incidents_discovered: set[int] | None = None
+    prs_created: int = 0
+    merge_edges_built: int = 0
 
     def __post_init__(self) -> None:
         if self.incidents_discovered is None:
@@ -223,6 +231,8 @@ class EnrichmentStats:
             "prs_with_closing_issues": self.prs_with_closing_issues,
             "edges_built": self.edges_built,
             "incidents_discovered": sorted(self.incidents_discovered or set()),
+            "prs_created": self.prs_created,
+            "merge_edges_built": self.merge_edges_built,
         }
 
 
@@ -296,11 +306,14 @@ class GitHubGraphQLClient:
                 seen += 1
                 if seen > max_prs:
                     return
+                merge_commit = (node.get("mergeCommit") or {}).get("oid")
                 yield PullRequestLinks(
                     number=int(node["number"]),
                     title=node.get("title"),
                     url=node.get("url"),
                     closed_at=node.get("closedAt"),
+                    state=node.get("state"),
+                    merge_commit_sha=merge_commit,
                     closing_issues=[
                         ClosingIssue(
                             number=int(issue["number"]),
@@ -337,6 +350,7 @@ class ClosingIssuesEnricher:
         repository_id: str,
         *,
         create_incidents: bool = True,
+        create_prs: bool = True,
         max_prs: int = MAX_PRS_PER_RUN,
         pr_numbers: Sequence[int] | None = None,
     ) -> EnrichmentStats:
@@ -347,19 +361,33 @@ class ClosingIssuesEnricher:
                 get a minimal ``(:Incident)`` stub node so the ``:CLOSES`` edge
                 resolves. Stubs keep the issue's own title/url and carry
                 ``source=github_graphql`` provenance.
+            create_prs: same idea for the **source** side of the edge: the full
+                ingestion only materializes a handful of ``(:PR)`` nodes, while
+                ``closingIssuesReferences`` spans every PR of the repository.
+                Without the stub, ``write_edge`` would skip all edges whose PR
+                is unknown (``rel_skipped_unresolved``). Stubs carry the PR's
+                own state/title and merge cleanly with the full ingestion later.
             pr_numbers: optional filter to enrich a single PR (idempotent
                 targeted re-run).
         """
         stats = EnrichmentStats()
-        from collections import Counter
 
         for pr_links in self._client.iter_pull_requests_with_closing_issues(
             repository_id, max_prs=max_prs
         ):
+            if pr_numbers is not None and pr_links.number not in pr_numbers:
+                continue
             stats.prs_seen += 1
             if not pr_links.closing_issues:
                 continue
             stats.prs_with_closing_issues += 1
+
+            if create_prs:
+                self._writer.write_node(self._pr_stub(pr_links, repository_id))
+                stats.prs_created += 1
+                merge_edge = self._merged_into_edge(pr_links, repository_id)
+                if merge_edge is not None and self._writer.write_edge(merge_edge):
+                    stats.merge_edges_built += 1
 
             if create_incidents:
                 for issue in pr_links.closing_issues:
@@ -373,6 +401,67 @@ class ClosingIssuesEnricher:
                 if linked:
                     stats.edges_built += 1
         return stats
+
+    @staticmethod
+    def _merged_into_edge(pr_links: PullRequestLinks, repository_id: str) -> Any | None:
+        """``(:PR)-[:MERGED_INTO]->(:Commit)`` when GitHub exposed a merge SHA.
+
+        The edge only resolves if the commit node already exists (full
+        ingestion or fixtures); otherwise the writer skips it and the stub PR
+        stays a leaf -- no dangling node is ever created.
+        """
+        from models import NodeKind, RelationType
+
+        if not pr_links.merge_commit_sha:
+            return None
+        return Edge.link(
+            source_id=f"{repository_id}#{pr_links.number}",
+            source_label=NodeKind.PR,
+            type=RelationType.MERGED_INTO,
+            target_id=pr_links.merge_commit_sha,
+            target_label=NodeKind.COMMIT,
+            provenance=Provenance(
+                source=SourceKind.GITHUB_GRAPHQL,
+                source_uri=pr_links.url or f"{GRAPHQL_ENDPOINT}#pull/{pr_links.number}",
+                extractor=EXTRACTOR,
+                extractor_version=EXTRACTOR_VERSION,
+                confidence=CLOSING_REFERENCE_CONFIDENCE,
+            ),
+        )
+
+    @staticmethod
+    def _pr_stub(pr_links: PullRequestLinks, repository_id: str) -> Any:
+        from models import PRState, PullRequest, make_pr_id
+
+        state = (pr_links.state or "").upper()
+        if state == "MERGED":
+            pr_state = PRState.MERGED
+        elif state == "OPEN":
+            pr_state = PRState.OPEN
+        else:
+            pr_state = PRState.CLOSED
+
+        def _dt(value: str | None) -> Any:
+            from datetime import datetime
+
+            return datetime.fromisoformat(value.replace("Z", "+00:00")) if value else None
+
+        return PullRequest(
+            id=make_pr_id(repository_id, pr_links.number),
+            repository_id=repository_id,
+            number=pr_links.number,
+            title=pr_links.title or f"#{pr_links.number}",
+            url=pr_links.url,
+            state=pr_state,
+            closed_at=_dt(pr_links.closed_at),
+            provenance=Provenance(
+                source=SourceKind.GITHUB_GRAPHQL,
+                source_uri=pr_links.url or f"{GRAPHQL_ENDPOINT}#pull/{pr_links.number}",
+                extractor=EXTRACTOR,
+                extractor_version=EXTRACTOR_VERSION,
+                confidence=CLOSING_REFERENCE_CONFIDENCE,
+            ),
+        )
 
     @staticmethod
     def _incident_stub(pr_links: PullRequestLinks, issue: ClosingIssue,

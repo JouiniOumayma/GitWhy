@@ -133,12 +133,14 @@ def test_execute_raises_on_graphql_errors(monkeypatch: pytest.MonkeyPatch) -> No
 # --------------------------------------------------------------------------- #
 # Mapping: GraphQL -> edges
 # --------------------------------------------------------------------------- #
-def _pr_links(numbers: list[int], pr_number: int = 1596) -> PullRequestLinks:
+def _pr_links(numbers: list[int], pr_number: int = 1596,
+              state: str | None = "MERGED") -> PullRequestLinks:
     return PullRequestLinks(
         number=pr_number,
         title="Fix SSL context creation",
         url=f"https://github.com/{REPO}/pull/{pr_number}",
         closed_at="2024-07-01T00:00:00Z",
+        state=state,
         closing_issues=[
             ClosingIssue(number=n, title=f"issue {n}", url=None, closed_at=None)
             for n in numbers
@@ -222,27 +224,33 @@ def test_pagination_follows_cursor_until_exhausted() -> None:
 # Enricher -> writer pipeline (fake writer, like the fake cursor)
 # --------------------------------------------------------------------------- #
 class _FakeWriter:
-    """Records write_node/write_edge calls; edges resolve (no skips)."""
+    """Mimics the real GraphWriter: an edge resolves only when both endpoint
+    nodes have been written (otherwise it would be ``rel_skipped_unresolved``)."""
 
     def __init__(self) -> None:
         self.nodes: list[Any] = []
         self.edges: list[Any] = []
-        self.resolve = True
+        self.node_ids: set[str] = set()
 
     def write_node(self, model: Any) -> str:
         self.nodes.append(model)
+        self.node_ids.add(model.id)
         return model.id
 
     def write_edge(self, edge: Any) -> bool:
         self.edges.append(edge)
-        return self.resolve
+        return edge.source_id in self.node_ids and edge.target_id in self.node_ids
 
 
-def test_enricher_creates_stub_incidents_and_edges() -> None:
+def test_enricher_creates_stub_pr_incident_and_edge() -> None:
     client = _scripted_client([{"repository": {"pullRequests": {
         "pageInfo": {"hasNextPage": False},
         "nodes": [{
             "number": 1596,
+            "state": "MERGED",
+            "title": "Fix SSL context creation",
+            "url": f"https://github.com/{REPO}/pull/1596",
+            "closedAt": "2024-07-01T00:00:00Z",
             "closingIssuesReferences": {"totalCount": 1, "nodes": [
                 {"number": 1583, "title": "SSL verify failed", "url":
                  "https://github.com/httpie/cli/issues/1583", "closedAt": "2024-11-01"},
@@ -254,29 +262,48 @@ def test_enricher_creates_stub_incidents_and_edges() -> None:
     stats = enricher.enrich(REPO)
     assert stats.prs_seen == 1
     assert stats.prs_with_closing_issues == 1
+    assert stats.prs_created == 1
     assert stats.edges_built == 1
     assert stats.incidents_discovered == {1583}
-    # one stub incident was MERGE'd before the edge
-    assert len(writer.nodes) == 1
-    assert isinstance(writer.nodes[0], Incident)
-    assert writer.nodes[0].id == f"{REPO}#issue-1583"
-    assert writer.nodes[0].provenance.source == SourceKind.GITHUB_GRAPHQL
+    # the stub PR is MERGE'd first so the :CLOSES edge resolves
+    assert len(writer.nodes) == 2
+    pr_stub, incident_stub = writer.nodes
+    from models import PullRequest
+
+    assert isinstance(pr_stub, PullRequest)
+    assert pr_stub.id == f"{REPO}#1596"
+    assert pr_stub.state.value == "merged"
+    assert pr_stub.provenance.source == SourceKind.GITHUB_GRAPHQL
+    assert isinstance(incident_stub, Incident)
+    assert incident_stub.id == f"{REPO}#issue-1583"
+    assert incident_stub.provenance.source == SourceKind.GITHUB_GRAPHQL
     edge = writer.edges[0]
     assert edge.source_id == f"{REPO}#1596"
 
 
-def test_enricher_without_incident_creation_skips_nothing_else() -> None:
+def test_pr_stub_state_mapping() -> None:
+    from models import PRState
+
+    for state, expected in (("MERGED", PRState.MERGED), ("OPEN", PRState.OPEN),
+                            ("CLOSED", PRState.CLOSED), (None, PRState.CLOSED)):
+        stub = ClosingIssuesEnricher._pr_stub(_pr_links([1583], state=state), REPO)
+        assert stub.state == expected
+
+
+def test_enricher_without_stub_creation_reports_the_skip() -> None:
+    """No stubs -> the writer cannot resolve the edge -> skipped, counted."""
     client = _scripted_client([{"repository": {"pullRequests": {
         "pageInfo": {"hasNextPage": False},
-        "nodes": [{"number": 1596, "closingIssuesReferences": {
+        "nodes": [{"number": 1596, "state": "MERGED", "closingIssuesReferences": {
             "totalCount": 1, "nodes": [{"number": 1583, "title": None, "url": None,
                                         "closedAt": None}]},
         }],
     }}}])
     writer = _FakeWriter()
-    stats = ClosingIssuesEnricher(client, writer).enrich(REPO, create_incidents=False)
+    stats = ClosingIssuesEnricher(client, writer).enrich(
+        REPO, create_incidents=False, create_prs=False)
     assert writer.nodes == []
-    assert stats.edges_built == 1
+    assert stats.edges_built == 0  # skipped: both endpoints were unknown
 
 
 def test_enricher_counts_prs_without_closing_issues() -> None:
@@ -285,8 +312,9 @@ def test_enricher_counts_prs_without_closing_issues() -> None:
         "nodes": [
             {"number": 1, "closingIssuesReferences": {"totalCount": 0, "nodes": []}},
             {"number": 2, "closingIssuesReferences": {"totalCount": 0, "nodes": []}},
-            {"number": 3, "closingIssuesReferences": {"totalCount": 1, "nodes": [
-                {"number": 42, "title": None, "url": None, "closedAt": None}]}},
+            {"number": 3, "state": "CLOSED", "closingIssuesReferences": {
+                "totalCount": 1, "nodes": [
+                    {"number": 42, "title": None, "url": None, "closedAt": None}]}},
         ],
     }}}])
     writer = _FakeWriter()
@@ -294,6 +322,7 @@ def test_enricher_counts_prs_without_closing_issues() -> None:
     assert stats.prs_seen == 3
     assert stats.prs_with_closing_issues == 1
     assert stats.edges_built == 1
+    assert stats.prs_created == 1
 
 
 def test_enrichment_stats_to_dict() -> None:
