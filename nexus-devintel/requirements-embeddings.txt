@@ -1,0 +1,9 @@
+# NEXUS-DevIntel — Phase 2 embedding extra (optional, heavy)
+# Install only when running the real bge-m3 indexing:
+#   pip install -r requirements-embeddings.txt
+# The mock backend (scripts/index_embeddings.py --mock-embeddings) and the
+# whole test suite work without any of these: torch is ~2 GB, keep it out of
+# the CI path.
+-r requirements.txt
+
+sentence-transformers>=3.0

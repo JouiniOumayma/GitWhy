@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS code_chunks (
     content_hash    text        NOT NULL,   -- sha256, for idempotent re-ingestion
     token_count     integer,
     commit_id       text,                   -- blob revision the chunk was taken from
+    -- Phase 2: per-row provenance, mirroring Neo4j's flattened prov_* block.
+    -- Added with ALTER TABLE (the CREATE TABLE above only runs on first boot).
+    metadata        jsonb       NOT NULL DEFAULT '{}'::jsonb,
     -- vector payload
     embedding       vector(1024),
     embedding_model text        DEFAULT 'BAAI/bge-m3',
@@ -60,6 +63,10 @@ CREATE INDEX IF NOT EXISTS code_chunks_fts_idx
 CREATE INDEX IF NOT EXISTS code_chunks_embedding_hnsw_idx
     ON code_chunks USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
+
+-- Phase 2: provenance column added to an existing table (see comment above);
+-- this no-op keeps the file re-runnable without re-creating the volume.
+ALTER TABLE code_chunks ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 -- ---------------------------------------------------------------------
 -- 2. evidence_embeddings — one row per (:Evidence) node.
