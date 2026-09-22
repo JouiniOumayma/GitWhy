@@ -339,6 +339,56 @@ rejeté avant tout octet réseau, label/relation Neo4j injectée refusée par la
 whitelist du `GraphWriter`, surface PostgreSQL vérifiée SELECT-only, aucune
 méthode mutante sur les clients.
 
+### 5. Indexation du contenu réel, sans attendre l'ingestion complète
+
+Les fixtures portent les `blob_sha` réels : l'indexeur peut donc embedder du
+**vrai code source** vérifié contre les objets git, en étendant le connecteur
+Phase 1 (pas en le dupliquant) :
+
+```bash
+# arbre HEAD réel (265 fichiers) -> Neo4j, puis vrais corps via blobs API
+python scripts/index_embeddings.py --real-content --from-api --ingest-tree \
+    --mock-embeddings
+
+# variante avec un clone local (aucune requête API)
+python scripts/index_embeddings.py --real-content --repo-path ../httpie-cli
+```
+
+Chaque corps est vérifié par `sha1("blob <len>\0" + contenu)` contre le
+`blob_sha` de la fixture/du nœud ; un écart (ou un binaire) retombe sur le
+texte synthétique plutôt que d'embedder du contenu faux sous un vrai id.
+La colonne `metadata.content_origin` trace ce qui a été embeddé
+(`git_blob_verified` / `synthetic`), et l'idempotence reste totale.
+
+### 6. Serveur MCP GitHub read-only (`ingestion/mcp_server.py`)
+
+Serveur MCP **stdio** (JSON-RPC 2.0, stdlib-only) exposant le connecteur
+Phase 1 à un agent :
+
+```bash
+python scripts/mcp_github.py --list-tools     # le registre
+python scripts/mcp_github.py --serve          # la boucle JSON-RPC
+```
+
+Configuration côté client MCP (Claude Desktop, etc.) :
+
+```json
+{
+  "mcpServers": {
+    "nexus-github": {
+      "command": "python",
+      "args": ["scripts/mcp_github.py", "--serve"]
+    }
+  }
+}
+```
+
+Cinq outils de lecture : `get_file` (contenu vérifié par blob SHA),
+`list_files`, `get_commit`, `get_pull_request`, `search_issues`. Le registre
+est un `frozenset` figé à l'import : aucun outil mutant n'est joignable, un
+nom forgé est rejeté **avant** tout dispatch — c'est le test d'attaque du
+jury (`pytest tests/test_security.py -v`, section MCP).
+
 ### Vérification en conditions réelles (2026-09-22)
 
 Pipeline validé sur la stack Docker live (Neo4j 5.26 + PostgreSQL 16.15) :
@@ -354,7 +404,14 @@ Pipeline validé sur la stack Docker live (Neo4j 5.26 + PostgreSQL 16.15) :
 4. `root_cause.py "httpie/cli#issue-1583" --write --hybrid` → EvidencePath
    valide (score 0.63), 37 `Evidence` graphe + 10 hybrides persistées
    (`MERGE` idempotent) ;
-5. non-régression : `impact.py httpie/cli::httpie/context.py` retrouve les
+5. enrichissement GraphQL réel : 817 PRs parcourues, **195 arêtes
+   `(:PR)-[:CLOSES]->(:Incident)`** à confidence 1.0 (vs 5 chaînes via git
+   log), 156 stubs PR, 136 incidents découverts ;
+6. contenu réel : arbre HEAD (265 `(:File)`) ingéré, **774 chunks dont 726
+   `git_blob_verified`** (vrai code httpie/cli en base) ;
+7. MCP live : `tools/call get_commit(7f03c52d)` et `get_file(ssl_.py,
+   verified=True)` répondent depuis GitHub via stdio ;
+8. non-régression : `impact.py httpie/cli::httpie/context.py` retrouve les
    22 dépendants directs / 37 transitifs documentés.
 
 > **Conflit de port 5432** : si un autre conteneur occupe déjà `5432` sur
