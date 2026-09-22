@@ -288,11 +288,17 @@ class BgeM3Backend(EmbeddingBackend):
     module must stay importable for tests and ``--dry-run`` without the model
     on disk. Normalization is on (bge models are trained for cosine similarity
     on normalized vectors, which is exactly what pgvector's ``<=>`` expects).
+
+    ``NEXUS_EMBEDDING_MODEL_PATH`` points at a local snapshot directory (e.g.
+    ``models/bge-m3`` filled by ``scripts/fetch_bge_m3.sh``) and skips the
+    hub entirely -- useful when HF connections stall.
     """
 
     name = EMBEDDING_MODEL
 
-    def __init__(self, model_name: str = EMBEDDING_MODEL, batch_size: int = 32) -> None:
+    def __init__(self, model_name: str | None = None, batch_size: int = 32) -> None:
+        import os
+
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
         except ImportError as error:  # pragma: no cover - environment-dependent
@@ -300,7 +306,9 @@ class BgeM3Backend(EmbeddingBackend):
                 "sentence-transformers is not installed. Install the embedding "
                 "extra: pip install -r requirements-embeddings.txt"
             ) from error
-        self._model = SentenceTransformer(model_name)
+        local_path = model_name or os.environ.get("NEXUS_EMBEDDING_MODEL_PATH")
+        source = local_path or EMBEDDING_MODEL
+        self._model = SentenceTransformer(source)
         self._batch_size = batch_size
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
@@ -342,6 +350,59 @@ class MockEmbeddingBackend(EmbeddingBackend):
         return vectors
 
 
+class HashingTokenBackend(EmbeddingBackend):
+    """Sparse bag-of-tokens vectors via feature hashing (stdlib-only, dim 1024).
+
+    The efficient alternative to the 2.3 GB ``bge-m3`` download when the goal
+    is a *working* hybrid retrieval rather than state-of-the-art semantics:
+
+    * **zero download, zero dependency** -- ``hashlib`` + ``re`` only, so it
+      runs wherever the test suite runs (774 chunks embed in ~1 second);
+    * **real token-level signal** -- each token (plus adjacent-token bigrams)
+      owns hashed dimension(s), so two texts sharing ``ssl`` / ``verify`` /
+      ``certificate`` get a high cosine while unrelated texts stay near zero.
+      The mock backend hashes the *whole text* instead, which carries no
+      token-level similarity at all;
+    * **pgvector-compatible** -- dim 1024, L2-normalized, cosine-ready, the
+      same contract as ``BgeM3Backend`` (signed hashing à la Vowpal Wabbit
+      to dampen collision bias);
+    * **deterministic** -- ``sha256``-based (never ``hash()``), so re-runs
+      are idempotent and the ``content_hash`` guards keep working.
+
+    Honest labelling: ``name = "hashing-token-1024"``, stored in
+    ``code_chunks.embedding_model`` -- never masquerading as ``BAAI/bge-m3``.
+    A later bge-m3 pass simply re-embeds (``_filter_pending`` keys on the
+    model name, ``_upsert_chunk`` rewrites on model drift).
+    """
+
+    name = "hashing-token-1024"
+
+    def __init__(self, use_bigrams: bool = True) -> None:
+        self._use_bigrams = use_bigrams
+
+    @staticmethod
+    def _tokens(text: str) -> list[str]:
+        return re.findall(r"[a-z0-9_]+", text.lower())
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        vectors: list[list[float]] = []
+        for text in texts:
+            tokens = self._tokens(text)
+            if self._use_bigrams and len(tokens) >= 2:
+                tokens = tokens + [f"{first} {second}"
+                                   for first, second in zip(tokens, tokens[1:])]
+            dense = [0.0] * EMBEDDING_DIM
+            for token in tokens:
+                digest = hashlib.sha256(token.encode("utf-8")).digest()
+                index = int.from_bytes(digest[:4], "big") % EMBEDDING_DIM
+                sign = 1.0 if digest[4] & 1 else -1.0
+                weight = 0.5 if " " in token else 1.0  # bigrams count half
+                dense[index] += sign * weight
+            norm = sum(value * value for value in dense) ** 0.5 or 1.0
+            vectors.append([round(value / norm, 6) for value in dense])
+        return vectors
+
+
 # --------------------------------------------------------------------------- #
 # Indexer
 # --------------------------------------------------------------------------- #
@@ -354,6 +415,7 @@ class IndexReport:
     embedded_count: int = 0
     written_count: int = 0
     skipped_hashes: int = 0
+    already_embedded: int = 0
     by_kind: dict[str, int] = field(default_factory=dict)
     run_id: str | None = None
 
@@ -406,7 +468,13 @@ class EmbeddingIndexer:
     def index_fixtures(self, fixtures_dir: Path, *, dry_run: bool = False,
                        batch_size: int = 64, content_provider: Any = None,
                        extra_files: list[File] | None = None) -> IndexReport:
-        """Full pipeline. ``dry_run`` stops right before any SQL is sent."""
+        """Full pipeline. ``dry_run`` stops right before any SQL is sent.
+
+        Resumable: chunks already embedded with the *same model* (same
+        ``content_hash`` + ``embedding_model`` row) are skipped before the
+        backend runs, so a long bge-m3 run interrupted midway can be replayed
+        without re-embedding (or re-paying for) what is already stored.
+        """
         chunks = self.build_chunks(fixtures_dir, content_provider=content_provider,
                                    extra_files=extra_files)
         report = IndexReport(repository_id=self._repository_id)
@@ -417,20 +485,67 @@ class EmbeddingIndexer:
             return report
 
         assert self._backend is not None, "a backend is required to write"
-        vectors = self._embed_all(chunks, batch_size)
-        report.embedded_count = len(vectors)
+        pending = self._filter_pending(chunks)
+        report.skipped_hashes = len(chunks) - len(pending)
+        if not pending:
+            return report
 
         import psycopg
 
+        # Batch-granular commits: a CPU bge-m3 run can take longer than any
+        # single shell timeout -- every committed batch is durable and the
+        # next run resumes after it (see _filter_pending).
         with psycopg.connect(self._dsn) as connection:
             run_id = self._open_run(connection)
             report.run_id = str(run_id)
-            with connection.cursor() as cursor:
-                for chunk, vector in zip(chunks, vectors):
-                    report.written_count += self._upsert_chunk(cursor, chunk, vector)
+            try:
+                for start in range(0, len(pending), batch_size):
+                    window = pending[start:start + batch_size]
+                    vectors = self._embed_all(window, batch_size)
+                    report.embedded_count += len(vectors)
+                    with connection.cursor() as cursor:
+                        for chunk, vector in zip(window, vectors):
+                            report.written_count += self._upsert_chunk(cursor, chunk, vector)
+                    connection.commit()
+            except Exception:
+                self._fail_run(connection, run_id, report)
+                raise
             self._close_run(connection, run_id, report)
             connection.commit()
         return report
+
+    def _fail_run(self, connection: Any, run_id: Any, report: IndexReport) -> None:
+        """Mark the ledger row as failed (best effort: the run must not lie)."""
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE ingestion_runs SET status = 'failed', "
+                    "finished_at = now(), stats = %s WHERE run_id = %s",
+                    (json.dumps({"written": report.written_count}), run_id),
+                )
+            connection.commit()
+        except Exception:  # noqa: BLE001 - already in a failure path
+            pass
+
+    def _filter_pending(self, chunks: list[CodeChunk]) -> list[CodeChunk]:
+        """Drop chunks already embedded with the current model (resumability)."""
+        import psycopg
+
+        model_name = self._backend.name if self._backend else EMBEDDING_MODEL
+        hashes = [chunk.content_hash for chunk in chunks]
+        done: set[str] = set()
+        with psycopg.connect(self._dsn) as connection:
+            with connection.cursor() as cursor:
+                for start in range(0, len(hashes), 500):
+                    window = hashes[start:start + 500]
+                    cursor.execute(
+                        "SELECT content_hash FROM code_chunks "
+                        "WHERE embedding IS NOT NULL AND embedding_model = %s "
+                        "AND content_hash = ANY(%s)",
+                        (model_name, window),
+                    )
+                    done.update(row[0] for row in cursor.fetchall())
+        return [chunk for chunk in chunks if chunk.content_hash not in done]
 
     def _embed_all(self, chunks: list[CodeChunk], batch_size: int) -> list[list[float]]:
         vectors: list[list[float]] = []
@@ -474,6 +589,7 @@ class EmbeddingIndexer:
                     symbol = EXCLUDED.symbol,
                     metadata = EXCLUDED.metadata
             WHERE code_chunks.content_hash IS DISTINCT FROM EXCLUDED.content_hash
+               OR code_chunks.embedding_model IS DISTINCT FROM EXCLUDED.embedding_model
             """,
             (
                 chunk.repository_id,
@@ -550,6 +666,7 @@ __all__ = [
     "EMBEDDING_MODEL",
     "EmbeddingBackend",
     "EmbeddingIndexer",
+    "HashingTokenBackend",
     "IndexReport",
     "MockEmbeddingBackend",
     "chunk_commit_message",

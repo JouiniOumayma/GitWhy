@@ -143,6 +143,34 @@ def test_mock_backend_is_deterministic_and_1024d() -> None:
     assert len(first[0]) == 1024
 
 
+def test_hashing_backend_carries_token_level_similarity() -> None:
+    """The efficient alternative must rank shared tokens above noise.
+
+    Regression pin for the bge-m3 download problem: ``--mock-embeddings``
+    hashes the whole text (cosine ~0.8 whatever the text), while the
+    hashing-token backend gives the SSL chunk a clear margin over an
+    unrelated chunk -- the property the hybrid vector half needs.
+    """
+    from ingestion.embedding_indexer import HashingTokenBackend
+
+    backend = HashingTokenBackend()
+    query, ssl_chunk, noise = backend.embed([
+        "SSL certificate verify failed after requests upgrade",
+        "def create_ssl_context(): certificate verify failed ssl context creation",
+        "typography quotes replacement changelog",
+    ])
+
+    def _cos(left: list[float], right: list[float]) -> float:
+        return sum(a * b for a, b in zip(left, right))
+
+    assert len(query) == 1024
+    assert _cos(query, query) == pytest.approx(1.0, abs=1e-3)
+    assert _cos(query, ssl_chunk) > _cos(query, noise) + 0.1
+    # Deterministic across calls (idempotent re-runs stay no-ops).
+    assert backend.embed(["ssl certificate verify failed"]) == \
+        backend.embed(["ssl certificate verify failed"])
+
+
 # --------------------------------------------------------------------------- #
 # SQL shape via a scripted fake cursor
 # --------------------------------------------------------------------------- #

@@ -4,7 +4,12 @@
 Week-1/2 Phase 2 usage (fixtures, offline)::
 
     python scripts/index_embeddings.py --dry-run
-    python scripts/index_embeddings.py --mock-embeddings
+    python scripts/index_embeddings.py --mock-embeddings      # legacy hashes (tests)
+    python scripts/index_embeddings.py                        # hashing-token backend
+
+The default backend is stdlib-only ``hashing-token-1024``: real token-level
+similarity, dim 1024, no download (~0.5 s for 774 chunks). ``--real-embeddings``
+opts into ``BAAI/bge-m3`` (downloads ~2.3 GB on first run).
 
 Week-3 Phase 2 usage (real content, read-only)::
 
@@ -37,6 +42,7 @@ from ingestion.content import (  # noqa: E402
 )
 from ingestion.embedding_indexer import (  # noqa: E402
     EmbeddingIndexer,
+    HashingTokenBackend,
     MockEmbeddingBackend,
 )
 
@@ -102,6 +108,12 @@ def main() -> int:
                         help="chunk and validate, but send nothing to PostgreSQL")
     parser.add_argument("--mock-embeddings", action="store_true",
                         help="use deterministic hash vectors instead of bge-m3")
+    parser.add_argument("--hashing-embeddings", action="store_true",
+                        help="use the stdlib hashing-token backend: real token-level "
+                             "similarity, dim 1024, no download (this is the default)")
+    parser.add_argument("--real-embeddings", action="store_true",
+                        help="use BAAI/bge-m3 via sentence-transformers "
+                             "(downloads ~2.3 GB on first run)")
     parser.add_argument("--real-content", action="store_true",
                         help="index real file bodies instead of synthetic text")
     parser.add_argument("--repo-path", default=None,
@@ -121,10 +133,12 @@ def main() -> int:
     repository_id = args.repository_id or os.environ.get("NEXUS_REPO_ID", "httpie/cli")
 
     provider = None
-    if args.real_content:
+    blob_cache_dir = PROJECT_ROOT / ".blob_cache"
+    if args.real_content or args.ingest_tree:
         if args.from_api:
-            provider = GitHubBlobContentProvider(None, repository_id)
-            print("content provider: GitHub blobs API (read-only GET)")
+            provider = GitHubBlobContentProvider(None, repository_id,
+                                                 cache_dir=blob_cache_dir)
+            print(f"content provider: GitHub blobs API (read-only GET, disk cache {blob_cache_dir})")
         elif args.repo_path:
             provider = LocalRepoContentProvider(args.repo_path)
             print(f"content provider: local clone {args.repo_path}")
@@ -132,9 +146,6 @@ def main() -> int:
             print("error: --real-content requires --repo-path or --from-api",
                   file=sys.stderr)
             return 2
-
-    if args.ingest_tree and provider is None:
-        provider = GitHubBlobContentProvider(None, repository_id)
 
     indexer = EmbeddingIndexer(dsn, repository_id=repository_id)
 
@@ -169,12 +180,21 @@ def main() -> int:
 
     if args.mock_embeddings:
         indexer._backend = MockEmbeddingBackend()
+        print("embedding backend: mock-hash-1024 (legacy whole-text hashes, tests only)")
     else:
-        from ingestion.embedding_indexer import BgeM3Backend
-
-        indexer._backend = BgeM3Backend()  # lazy import: clear error if missing
+        # Default backend: hashing-token (stdlib-only, real token similarity,
+        # dim 1024, no download). --mock-embeddings keeps the legacy hashes
+        # for the offline tests; --real-embeddings opts into bge-m3.
+        indexer._backend = HashingTokenBackend()
+        print(f"embedding backend: {indexer._backend.name} (stdlib-only, no download)")
 
     try:
+        if args.real_embeddings:
+            from ingestion.embedding_indexer import BgeM3Backend
+
+            print("loading BAAI/bge-m3 (first run downloads ~2.3 GB)...")
+            indexer._backend = BgeM3Backend()
+
         report = indexer.index_fixtures(
             Path(args.fixtures_dir),
             content_provider=provider,
@@ -190,7 +210,8 @@ def main() -> int:
 
     print(f"== Indexed {report.repository_id} ==")
     print(f"  chunks            : {report.chunk_count}")
-    print(f"  embedded          : {report.embedded_count}")
+    print(f"  already embedded  : {report.skipped_hashes} (resumable skip, same model)")
+    print(f"  embedded now      : {report.embedded_count}")
     print(f"  written (upserts) : {report.written_count}")
     for kind, count in sorted(report.by_kind.items()):
         print(f"  {kind:<18} {count}")

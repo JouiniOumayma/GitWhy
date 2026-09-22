@@ -29,6 +29,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+
 from models import File
 
 #: Marker values for ``metadata['content_origin']``.
@@ -77,25 +78,65 @@ class LocalRepoContentProvider:
 class GitHubBlobContentProvider:
     """Real bodies from the GitHub blobs API (read-only GET), blob_sha verified.
 
-    Results are cached per blob SHA: fixtures often share blobs and a re-run
-    of the indexer must not re-spend the quota.
+    Two cache layers so a long indexing run can be interrupted and replayed
+    without re-spending the quota:
+
+    * in-memory per blob SHA (fixtures often share blobs);
+    * on-disk JSON files (``cache_dir/<sha>.json``) surviving process death --
+      the CPU bge-m3 encoding runs longer than a shell timeout, and the
+      ~250 blob GETs must not be replayed on every retry.
     """
 
-    def __init__(self, client: Any, repository_id: str) -> None:
+    def __init__(self, client: Any, repository_id: str,
+                 cache_dir: str | Path | None = None) -> None:
         from ingestion import GitHubClient
 
         self._client = client if client is not None else GitHubClient()
         self._repository_id = repository_id
-        self._cache: dict[str, str | None] = {}
+        self._memory: dict[str, str | None] = {}
+        self._cache_dir = Path(cache_dir) if cache_dir else None
+        if self._cache_dir is not None:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
 
     def __call__(self, file: File) -> str | None:
         if not file.blob_sha:
             return None
-        if file.blob_sha in self._cache:
-            return self._cache[file.blob_sha]
+        if file.blob_sha in self._memory:
+            return self._memory[file.blob_sha]
+        cached = self._read_disk_cache(file.blob_sha)
+        if cached is not None:
+            self._memory[file.blob_sha] = cached
+            return cached
         content = self._fetch(file.blob_sha)
-        self._cache[file.blob_sha] = content
+        self._memory[file.blob_sha] = content
+        self._write_disk_cache(file.blob_sha, content)
         return content
+
+    # ---- disk cache ---------------------------------------------------------#
+    def _disk_path(self, blob_sha: str) -> Path | None:
+        if self._cache_dir is None:
+            return None
+        return self._cache_dir / f"{blob_sha}.json"
+
+    def _read_disk_cache(self, blob_sha: str) -> str | None:
+        path = self._disk_path(blob_sha)
+        if path is None or not path.exists():
+            return None
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        # ``null`` means "fetched, binary/undecodable" -- a valid cached answer.
+        return payload.get("content")
+
+    def _write_disk_cache(self, blob_sha: str, content: str | None) -> None:
+        path = self._disk_path(blob_sha)
+        if path is None:
+            return
+        try:
+            path.write_text(json.dumps({"content": content}), encoding="utf-8")
+        except OSError:
+            pass  # cache is best-effort
 
     def _fetch(self, blob_sha: str) -> str | None:
         payload, _ = self._client.get(f"/repos/{self._repository_id}/git/blobs/{blob_sha}")

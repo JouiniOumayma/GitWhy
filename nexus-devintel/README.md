@@ -39,8 +39,12 @@ nexus-devintel/
 ├── scripts/
 │   ├── load_neo4j.py           #    chargement idempotent (+ --dry-run)
 │   ├── impact.py               #    CLI Change Impact -> EvidencePath (+ --write)
+│   ├── root_cause.py           #    CLI Root Cause (+ --hybrid, --write)
+│   ├── index_embeddings.py     #    CLI indexation pgvector (hashing-token par défaut, --real-embeddings pour bge-m3)
+│   ├── enrich_graphql.py       #    CLI enrichissement closingIssuesReferences
+│   ├── mcp_github.py           #    serveur MCP GitHub read-only (stdio)
 │   └── validate_fixtures.py    #    schéma + fermeture référentielle
-├── tests/                      # 58 tests : contrats, fixtures, connecteur, impact
+├── tests/                      # 140 tests : contrats, fixtures, connecteur, impact, root cause, hybride, sécurité
 ├── docker-compose.yml          # 3. Neo4j 5.26 + APOC, PostgreSQL 16 + pgvector
 └── .env.example
 ```
@@ -268,11 +272,15 @@ bout en bout sur des données factices :
 # a) plan de chunking sans base de données
 python scripts/index_embeddings.py --dry-run
 
-# b) smoke test SQL avec vecteurs de hachage déterministes (offline)
+# b) indexation par défaut : backend hashing-token-1024 (stdlib-only,
+#    similarité token réelle, ~0.5 s pour 774 chunks, zéro téléchargement)
+python scripts/index_embeddings.py
+
+# c) legacy : whole-text hashes pour les tests offline
 python scripts/index_embeddings.py --mock-embeddings
 
-# c) la vraie indexation bge-m3 (pip install -r requirements-embeddings.txt)
-python scripts/index_embeddings.py
+# d) la vraie indexation bge-m3, opt-in (pip install -r requirements-embeddings.txt, ~2.3 Go)
+python scripts/index_embeddings.py --real-embeddings
 ```
 
 Design : ids de chunk conformes au schéma (`repo::path#L<s>-L<e>`), provenance

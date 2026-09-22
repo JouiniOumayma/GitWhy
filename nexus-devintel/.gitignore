@@ -18,3 +18,9 @@ venv/
 # Local database dumps produced while experimenting
 *.dump
 *.sql.gz
+.blob_cache/
+/models/bge-m3/
+bge_run.log
+rca_*.json
+rca_demo.json
+
