@@ -229,6 +229,87 @@ def test_hybrid_retrieval_sends_only_selects(monkeypatch: pytest.MonkeyPatch,
 
 
 # --------------------------------------------------------------------------- #
+# MCP GitHub: the tool surface exposed to an agent is read-only by construction
+# --------------------------------------------------------------------------- #
+def test_mcp_registry_contains_no_write_tool() -> None:
+    """The registry is the security boundary: it must stay write-free."""
+    from ingestion.mcp_server import MCP_TOOLS
+
+    forbidden = ("create", "update", "delete", "merge", "close", "edit",
+                 "push", "fork", "star", "comment", "label", "assign")
+    for name in MCP_TOOLS:
+        assert not any(word in name.lower() for word in forbidden), name
+
+
+def test_mcp_unknown_tool_is_rejected_before_any_call() -> None:
+    """Even a forged 'mutation' tool name cannot reach a handler."""
+    from ingestion.mcp_server import call_tool
+
+    with pytest.raises(KeyError, match="unknown tool"):
+        call_tool("create_issue", {"repo": "httpie/cli", "title": "pwned"})
+
+
+def test_mcp_tools_cannot_receive_a_mutating_verb() -> None:
+    """Arguments are data; the transport verb is pinned GET in the client."""
+    import inspect
+
+    from ingestion import GitHubClient
+
+    assert 'method="GET"' in inspect.getsource(GitHubClient.get)
+
+
+def test_mcp_tool_results_cannot_mutate_github_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Live-fire: run every tool against a transport that fails on anything
+    that is not a GET, then assert every HTTP attempt was a GET."""
+    import json as _json
+
+    import ingestion.github_client as gh
+
+    attempts: list[str] = []
+
+    class _StrictResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return _json.dumps({"tree": [], "encoding": "base64",
+                                "content": "", "items": []}).encode()
+
+        def geturl(self):
+            return "http://test"
+
+    def _strict_urlopen(request, timeout):
+        attempts.append(request.get_method())
+        assert request.get_method() == "GET", \
+            f"WRITE LEAK via MCP: {request.get_method()} {request.geturl()}"
+        return _StrictResponse()
+
+    monkeypatch.setattr(gh.urllib.request, "urlopen", _strict_urlopen)
+
+    from ingestion.mcp_server import MCP_TOOLS, call_tool
+
+    arguments = {
+        "get_file": {"repo": "httpie/cli", "path": "httpie/client.py"},
+        "list_files": {"repo": "httpie/cli"},
+        "get_commit": {"repo": "httpie/cli", "sha": "a" * 40},
+        "get_pull_request": {"repo": "httpie/cli", "number": 1},
+        "search_issues": {"repo": "httpie/cli", "query": "ssl"},
+    }
+    for name, tool in MCP_TOOLS.items():
+        try:
+            call_tool(name, arguments[name])  # may report 'not found': fine
+        except AssertionError:
+            raise  # a write leak must fail the test loudly
+        except Exception:
+            pass  # HTTP/parsing quirks on empty payloads are acceptable here
+    assert attempts, "the tools must have attempted (read-only) HTTP calls"
+    assert set(attempts) == {"GET"}
+
+
+# --------------------------------------------------------------------------- #
 # The analyzers never write: analysis is separate from persistence
 # --------------------------------------------------------------------------- #
 def test_analyzers_expose_no_write_surface() -> None:
