@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Protocol, Sequence
 
+from ingestion.content import ORIGIN_SYNTHETIC, content_with_origin
 from models import (
     Commit,
     File,
@@ -84,6 +85,9 @@ class CodeChunk:
     kind: str              # file | commit_message | incident_body
     source_node_id: str    # id of the fixture node the text was taken from
     provenance: Provenance
+    #: What the text actually is (``synthetic`` / ``git_blob_verified`` /
+    #: ``api_blob``), surfaced in the row metadata for honesty.
+    content_origin: str = ORIGIN_SYNTHETIC
 
     def text_for_embedding(self) -> str:
         """``bge-m3`` is trained on raw text: no prefix, no markdown scaffolding."""
@@ -122,9 +126,9 @@ def chunk_file(file: File, *, content_provider: "ContentProvider | None" = None,
     ``content_hash`` (and therefore the UPSERT) stable across runs.
     """
     if content_provider is not None:
-        content = content_provider(file)
+        content, origin = content_with_origin(content_provider, file)
     else:
-        content = _synthetic_file_body(file)
+        content, origin = _synthetic_file_body(file), ORIGIN_SYNTHETIC
     if not content.strip():
         return []
 
@@ -157,6 +161,7 @@ def chunk_file(file: File, *, content_provider: "ContentProvider | None" = None,
                     kind="file",
                     source_node_id=file.id,
                     provenance=file.provenance,
+                    content_origin=origin,
                 )
             )
         if end >= total:
@@ -192,6 +197,7 @@ def chunk_commit_message(commit: Commit) -> list[CodeChunk]:
             kind="commit_message",
             source_node_id=commit.id,
             provenance=commit.provenance,
+            content_origin="commit_message",
         )
     ]
 
@@ -218,6 +224,7 @@ def chunk_incident(incident: Incident) -> list[CodeChunk]:
             kind="incident_body",
             source_node_id=incident.id,
             provenance=incident.provenance,
+            content_origin="incident_body",
         )
     ]
 
@@ -367,26 +374,41 @@ class EmbeddingIndexer:
         self._repository_id = repository_id
 
     # ---- chunking --------------------------------------------------------- #
-    def build_chunks(self, fixtures_dir: Path) -> list[CodeChunk]:
-        """Chunk every fixture worth indexing, in a stable order."""
+    def build_chunks(self, fixtures_dir: Path, *, content_provider: Any = None,
+                     extra_files: list[File] | None = None) -> list[CodeChunk]:
+        """Chunk every fixture worth indexing, in a stable order.
+
+        ``content_provider`` (see :mod:`ingestion.content`) upgrades file
+        chunks from synthetic bodies to real, blob-verified content.
+        ``extra_files`` indexes additional ``(:File)`` models (e.g. the real
+        HEAD tree ingested separately) that the fixtures do not carry.
+        """
         chunks: list[CodeChunk] = []
         files = self._load_fixtures(fixtures_dir, "files", File)
         commits = self._load_fixtures(fixtures_dir, "commits", Commit)
         incidents = self._load_fixtures(fixtures_dir, "incidents", Incident)
 
         for file in sorted(files, key=lambda item: item.id):
-            chunks.extend(chunk_file(file))
+            chunks.extend(chunk_file(file, content_provider=content_provider))
         for commit in sorted(commits, key=lambda item: item.id):
             chunks.extend(chunk_commit_message(commit))
         for incident in sorted(incidents, key=lambda item: item.id):
             chunks.extend(chunk_incident(incident))
+
+        fixture_ids = {file.id for file in files}
+        for file in sorted(extra_files or [], key=lambda item: item.id):
+            if file.id in fixture_ids:
+                continue
+            chunks.extend(chunk_file(file, content_provider=content_provider))
         return chunks
 
     # ---- indexing --------------------------------------------------------- #
     def index_fixtures(self, fixtures_dir: Path, *, dry_run: bool = False,
-                       batch_size: int = 64) -> IndexReport:
+                       batch_size: int = 64, content_provider: Any = None,
+                       extra_files: list[File] | None = None) -> IndexReport:
         """Full pipeline. ``dry_run`` stops right before any SQL is sent."""
-        chunks = self.build_chunks(fixtures_dir)
+        chunks = self.build_chunks(fixtures_dir, content_provider=content_provider,
+                                   extra_files=extra_files)
         report = IndexReport(repository_id=self._repository_id)
         report.chunk_count = len(chunks)
         for chunk in chunks:
@@ -435,6 +457,7 @@ class EmbeddingIndexer:
             "prov_extractor": EXTRACTOR,
             "prov_extractor_version": EXTRACTOR_VERSION,
             "embedding_model": self._backend.name if self._backend else EMBEDDING_MODEL,
+            "content_origin": chunk.content_origin,
         }
         cursor.execute(
             """
