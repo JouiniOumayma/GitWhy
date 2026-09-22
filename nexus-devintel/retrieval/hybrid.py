@@ -6,8 +6,8 @@ fusion (k=60) of a ``ts_rank_cd`` lexical ranking and an HNSW cosine ranking,
 both over ``code_chunks``. This module is the Python half of the contract:
 
 1. embed the question with the same backend used at indexing time
-   (``BAAI/bge-m3``, dim 1024 -- dimension drift is checked against the
-   indexer's constant);
+   (``sentence-transformers/all-MiniLM-L6-v2``, dim 384 -- dimension drift is
+   checked against the indexer's constant);
 2. call ``hybrid_search_code_chunks`` (read-only ``SELECT``);
 3. package each row as an :class:`~models.evidence.Evidence` node of kind
    ``code_chunk`` with ``retrieval_strategy=hybrid``, carrying the RRF score
@@ -40,8 +40,8 @@ from models import (
 EXTRACTOR = "nexus-devintel.retrieval.hybrid"
 EXTRACTOR_VERSION = "0.1.0"
 
-#: Must match ingestion.embedding_indexer (and 001_init.sql's vector(1024)).
-EMBEDDING_DIM = 1024
+#: Must match ingestion.embedding_indexer (and 001_init.sql's vector(384)).
+EMBEDDING_DIM = 384
 
 _HYBRID_QUERY = """
 SELECT chunk_id, file_id, path, symbol, start_line, end_line, content,
@@ -108,10 +108,12 @@ class HybridRetriever:
                  path_regex: str | None = None) -> HybridReport:
         """Run the hybrid search; ``path_regex`` narrows to a subtree (read-only)."""
         if self._backend is None:
-            raise HybridRetrievalError(
-                "no embedding backend configured; pass one at construction "
-                "(BgeM3Backend for the real thing, MockEmbeddingBackend offline)"
-            )
+            from ingestion.embedding_indexer import HashingTokenBackend
+
+            # Default backend: hashing-token (stdlib-only, dim 384). Pass an
+            # explicit backend (MiniLMBackend, MockEmbeddingBackend) to
+            # override.
+            self._backend = HashingTokenBackend()
         embedding = self._backend.embed([query])[0]
         if len(embedding) != EMBEDDING_DIM:
             raise HybridRetrievalError(

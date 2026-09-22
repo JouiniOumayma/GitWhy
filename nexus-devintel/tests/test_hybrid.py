@@ -6,7 +6,7 @@ Pinned invariants:
   repository filter (the contract Person A wrote in ``001_init.sql``);
 * rows are packaged into ``code_chunk`` Evidence nodes with hybrid strategy,
   RRF score, both ranks and a graph anchor (File / Commit / Incident);
-* dimension drift between the backend and ``vector(1024)`` is rejected with an
+* dimension drift between the backend and ``vector(384)`` is rejected with an
   actionable message;
 * evidence ids are stable across identical runs.
 """
@@ -126,7 +126,7 @@ def test_rows_are_packaged_as_hybrid_evidence(monkeypatch: pytest.MonkeyPatch,
                                               retriever: HybridRetriever) -> None:
     monkeypatch.setattr("psycopg.connect", lambda dsn: _FakeConnection([_row("a")]))
     report = retriever.retrieve(QUERY)
-    assert report.backend_name == "mock-hash-1024"
+    assert report.backend_name == "mock-hash-384"
     match = report.matches[0]
     assert match.citation == "httpie/ssl_a.py:221-245 (create_ssl_context)"
     evidence = report.evidences[0]
@@ -172,10 +172,16 @@ def test_dimension_drift_is_rejected(retriever: HybridRetriever) -> None:
         retriever.retrieve(QUERY)
 
 
-def test_missing_backend_is_rejected() -> None:
+def test_missing_backend_falls_back_to_hashing_tokens(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """No backend configured -> stdlib hashing fallback (dim 384), not a crash."""
+    from ingestion.embedding_indexer import EMBEDDING_DIM
+
+    monkeypatch.setattr("psycopg.connect", lambda dsn: _FakeConnection([_row("a")]))
     retriever = HybridRetriever("postgresql://unused", None)
-    with pytest.raises(HybridRetrievalError, match="no embedding backend"):
-        retriever.retrieve(QUERY)
+    report = retriever.retrieve(QUERY)
+    assert report.backend_name == "hashing-token-384"
+    assert EMBEDDING_DIM == 384
 
 
 def test_evidence_ids_are_stable(monkeypatch: pytest.MonkeyPatch,

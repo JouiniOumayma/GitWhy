@@ -19,6 +19,7 @@ venv/
 *.dump
 *.sql.gz
 .blob_cache/
+/models/minilm-l6-v2/
 /models/bge-m3/
 bge_run.log
 rca_*.json

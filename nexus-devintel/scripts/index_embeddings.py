@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """CLI: index code chunks into pgvector (fixtures and/or the real repository).
 
-Week-1/2 Phase 2 usage (fixtures, offline)::
+Default backend: ``sentence-transformers/all-MiniLM-L6-v2`` (dim 384,
+~90 MB download, ~1 min for 774 chunks on CPU)::
 
-    python scripts/index_embeddings.py --dry-run
-    python scripts/index_embeddings.py --mock-embeddings      # legacy hashes (tests)
-    python scripts/index_embeddings.py                        # hashing-token backend
-
-The default backend is stdlib-only ``hashing-token-1024``: real token-level
-similarity, dim 1024, no download (~0.5 s for 774 chunks). ``--real-embeddings``
-opts into ``BAAI/bge-m3`` (downloads ~2.3 GB on first run).
+    python scripts/index_embeddings.py --dry-run       # chunking plan, no DB
+    python scripts/index_embeddings.py                # real MiniLM embeddings
+    python scripts/index_embeddings.py --mock-embeddings    # offline tests only
+    python scripts/index_embeddings.py --hashing-embeddings # stdlib fallback, dim 384
 
 Week-3 Phase 2 usage (real content, read-only)::
 
@@ -107,13 +105,13 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true",
                         help="chunk and validate, but send nothing to PostgreSQL")
     parser.add_argument("--mock-embeddings", action="store_true",
-                        help="use deterministic hash vectors instead of bge-m3")
+                        help="use deterministic hash vectors (dim 384, offline tests only)")
     parser.add_argument("--hashing-embeddings", action="store_true",
-                        help="use the stdlib hashing-token backend: real token-level "
-                             "similarity, dim 1024, no download (this is the default)")
+                        help="use the stdlib hashing-token backend (dim 384, no download, "
+                             "no torch: offline fallback with real token signal)")
     parser.add_argument("--real-embeddings", action="store_true",
-                        help="use BAAI/bge-m3 via sentence-transformers "
-                             "(downloads ~2.3 GB on first run)")
+                        help="deprecated alias: MiniLM is now the default "
+                             "(kept for compatibility)")
     parser.add_argument("--real-content", action="store_true",
                         help="index real file bodies instead of synthetic text")
     parser.add_argument("--repo-path", default=None,
@@ -180,21 +178,20 @@ def main() -> int:
 
     if args.mock_embeddings:
         indexer._backend = MockEmbeddingBackend()
-        print("embedding backend: mock-hash-1024 (legacy whole-text hashes, tests only)")
-    else:
-        # Default backend: hashing-token (stdlib-only, real token similarity,
-        # dim 1024, no download). --mock-embeddings keeps the legacy hashes
-        # for the offline tests; --real-embeddings opts into bge-m3.
+        print("embedding backend: mock-hash-384 (offline tests only)")
+    elif args.hashing_embeddings:
         indexer._backend = HashingTokenBackend()
-        print(f"embedding backend: {indexer._backend.name} (stdlib-only, no download)")
+        print(f"embedding backend: {indexer._backend.name} (stdlib-only fallback)")
+    else:
+        # Default (and --real-embeddings): real MiniLM-L6-v2, ~90 MB.
+        # Constructed lazily here -- AFTER chunking and blob fetching, so an
+        # interrupted run keeps its disk cache warm.
+        from ingestion.embedding_indexer import MiniLMBackend
+
+        print("loading sentence-transformers/all-MiniLM-L6-v2 (~90 MB first run)...")
+        indexer._backend = MiniLMBackend()
 
     try:
-        if args.real_embeddings:
-            from ingestion.embedding_indexer import BgeM3Backend
-
-            print("loading BAAI/bge-m3 (first run downloads ~2.3 GB)...")
-            indexer._backend = BgeM3Backend()
-
         report = indexer.index_fixtures(
             Path(args.fixtures_dir),
             content_provider=provider,

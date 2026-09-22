@@ -64,10 +64,11 @@ def main() -> int:
     parser.add_argument("--hybrid-query", default=None,
                         help="query text for --hybrid (default: the incident title)")
     parser.add_argument("--hybrid-mock-embeddings", action="store_true",
-                        help="use deterministic hash vectors for --hybrid (offline)")
+                        help="use deterministic hash vectors for --hybrid "
+                             "(offline tests only, dim 384)")
     parser.add_argument("--hybrid-hashing-embeddings", action="store_true",
-                        help="use the hashing-token backend for --hybrid "
-                             "(stdlib-only, this is the default)")
+                        help="use the stdlib hashing-token backend for --hybrid "
+                             "(dim 384, no torch)")
     args = parser.parse_args()
 
     _load_dotenv(PROJECT_ROOT / ".env")
@@ -98,6 +99,7 @@ def main() -> int:
             try:
                 from ingestion.embedding_indexer import (
                     HashingTokenBackend,
+                    MiniLMBackend,
                     MockEmbeddingBackend,
                 )
                 from retrieval import HybridRetriever
@@ -105,12 +107,13 @@ def main() -> int:
                 dsn = os.environ.get("POSTGRES_DSN") or \
                     "postgresql://nexus:nexus@localhost:5432/nexus"
                 if args.hybrid_mock_embeddings:
-                    # Legacy whole-text hashes: only correct against an index
-                    # built with --mock-embeddings.
+                    # Only correct against an index built with --mock-embeddings.
                     backend = MockEmbeddingBackend()
-                else:
-                    # Default: hashing-token, matching the indexer's default.
+                elif args.hybrid_hashing_embeddings:
                     backend = HashingTokenBackend()
+                else:
+                    # Default: real MiniLM, matching the indexer's default.
+                    backend = MiniLMBackend()
                 retriever = HybridRetriever(dsn, backend)
                 hybrid_report = retriever.retrieve(
                     args.hybrid_query or report.path.hops[0].node_id,

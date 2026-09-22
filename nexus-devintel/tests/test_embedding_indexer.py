@@ -5,7 +5,8 @@ Three layers are pinned:
 * **chunking** -- stable chunk ids (``repo::path#L<s>-L<e>``), the fixture
   provenance carried onto every chunk, and the file/commit/incident split;
 * **backends** -- the mock backend is deterministic (same text -> same vector,
-  dim 1024) so UPSERTs stay idempotent without torch;
+  dim 384) so UPSERTs stay idempotent without torch; the hashing-token
+  backend (dim 384) carries real token-level similarity;
 * **SQL shape** -- the UPSERT targets the UNIQUE ``(file_id, start_line,
   end_line)`` conflict target with a hash guard, and ``ingestion_runs`` is
   opened/closed around the run. A scripted fake cursor records every call, the
@@ -133,24 +134,18 @@ def test_incident_chunk_uses_synthetic_provenance() -> None:
 # --------------------------------------------------------------------------- #
 # Backends
 # --------------------------------------------------------------------------- #
-def test_mock_backend_is_deterministic_and_1024d() -> None:
+def test_mock_backend_is_deterministic_and_384d() -> None:
     backend = MockEmbeddingBackend()
     first = backend.embed(["ssl certificate verify failed"])
     second = backend.embed(["ssl certificate verify failed"])
     other = backend.embed(["unrelated text"])
     assert first == second
     assert first[0] != other[0]
-    assert len(first[0]) == 1024
+    assert len(first[0]) == 384
 
 
 def test_hashing_backend_carries_token_level_similarity() -> None:
-    """The efficient alternative must rank shared tokens above noise.
-
-    Regression pin for the bge-m3 download problem: ``--mock-embeddings``
-    hashes the whole text (cosine ~0.8 whatever the text), while the
-    hashing-token backend gives the SSL chunk a clear margin over an
-    unrelated chunk -- the property the hybrid vector half needs.
-    """
+    """The offline fallback must rank shared tokens above noise (dim 384)."""
     from ingestion.embedding_indexer import HashingTokenBackend
 
     backend = HashingTokenBackend()
@@ -163,7 +158,7 @@ def test_hashing_backend_carries_token_level_similarity() -> None:
     def _cos(left: list[float], right: list[float]) -> float:
         return sum(a * b for a, b in zip(left, right))
 
-    assert len(query) == 1024
+    assert len(query) == 384
     assert _cos(query, query) == pytest.approx(1.0, abs=1e-3)
     assert _cos(query, ssl_chunk) > _cos(query, noise) + 0.1
     # Deterministic across calls (idempotent re-runs stay no-ops).

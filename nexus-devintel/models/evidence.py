@@ -31,8 +31,8 @@ class VectorRef(BaseModel):
 
     table: str = Field(default="evidence_embeddings")
     row_id: str = Field(..., description="Primary key (uuid) of the pgvector row.")
-    model: str = Field(default="BAAI/bge-m3", description="Embedding model name.")
-    dim: int = Field(default=1024, ge=1)
+    model: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", description="Embedding model name.")
+    dim: int = Field(default=384, ge=1)
     distance: float | None = Field(
         default=None, ge=0.0, description="Distance returned by the similarity search."
     )

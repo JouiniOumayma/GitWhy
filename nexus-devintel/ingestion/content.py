@@ -83,8 +83,8 @@ class GitHubBlobContentProvider:
 
     * in-memory per blob SHA (fixtures often share blobs);
     * on-disk JSON files (``cache_dir/<sha>.json``) surviving process death --
-      the CPU bge-m3 encoding runs longer than a shell timeout, and the
-      ~250 blob GETs must not be replayed on every retry.
+      the CPU MiniLM encoding can outlast a shell timeout, and the ~250 blob
+      GETs must not be replayed on every retry.
     """
 
     def __init__(self, client: Any, repository_id: str,

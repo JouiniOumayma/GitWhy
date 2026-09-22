@@ -7,9 +7,8 @@
 --   1. store the embeddings the graph cannot hold (code chunks, evidence)
 --   2. expose the similarity-search primitives the retriever calls
 --
--- Dimensions: 1024 matches BAAI/bge-m3 and intfloat/e5-large-v2.
--- For OpenAI text-embedding-3-small (1536) change VECTOR_DIM below AND
--- the dimension in the table definitions, then re-create the volume.
+-- Dimensions: 384 matches sentence-transformers/all-MiniLM-L6-v2 (~90 MB).
+-- (Formerly 1024 for BAAI/bge-m3: see 002_mini.sql for the migration.)
 -- =====================================================================
 
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -38,8 +37,8 @@ CREATE TABLE IF NOT EXISTS code_chunks (
     -- Added with ALTER TABLE (the CREATE TABLE above only runs on first boot).
     metadata        jsonb       NOT NULL DEFAULT '{}'::jsonb,
     -- vector payload
-    embedding       vector(1024),
-    embedding_model text        DEFAULT 'BAAI/bge-m3',
+    embedding       vector(384),
+    embedding_model text        DEFAULT 'sentence-transformers/all-MiniLM-L6-v2',
     created_at      timestamptz NOT NULL DEFAULT now(),
     UNIQUE (file_id, start_line, end_line)
 );
@@ -83,8 +82,8 @@ CREATE TABLE IF NOT EXISTS evidence_embeddings (
     node_id         text,
     text            text        NOT NULL,
     metadata        jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    embedding       vector(1024),
-    embedding_model text        DEFAULT 'BAAI/bge-m3',
+    embedding       vector(384),
+    embedding_model text        DEFAULT 'sentence-transformers/all-MiniLM-L6-v2',
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
@@ -140,7 +139,7 @@ CREATE INDEX IF NOT EXISTS ingestion_runs_repository_idx
 DROP FUNCTION IF EXISTS match_code_chunks(vector, integer, text, text);
 
 CREATE OR REPLACE FUNCTION match_code_chunks(
-    query_embedding vector(1024),
+    query_embedding vector(384),
     match_count     integer DEFAULT 10,
     filter_repository text DEFAULT NULL,
     filter_path_regex text DEFAULT NULL
@@ -177,7 +176,7 @@ $$;
 DROP FUNCTION IF EXISTS match_evidence(vector, integer, text);
 
 CREATE OR REPLACE FUNCTION match_evidence(
-    query_embedding vector(1024),
+    query_embedding vector(384),
     match_count     integer DEFAULT 10,
     filter_answer   text DEFAULT NULL
 )
@@ -208,7 +207,7 @@ DROP FUNCTION IF EXISTS hybrid_search_code_chunks(text, vector, integer, integer
 
 CREATE OR REPLACE FUNCTION hybrid_search_code_chunks(
     query_text      text,
-    query_embedding vector(1024),
+    query_embedding vector(384),
     match_count     integer DEFAULT 10,
     rrf_k           integer DEFAULT 60,
     filter_repository text DEFAULT NULL

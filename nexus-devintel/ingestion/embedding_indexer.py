@@ -11,9 +11,10 @@ Pipeline (``EmbeddingIndexer``):
    ``(:File)`` node through ``code_chunks.file_id``. Commit messages and
    incident bodies get deterministic pseudo-chunks (``#L1``) because the
    ``code_chunks`` table requires line bounds;
-2. **embed** -- ``BAAI/bge-m3`` through ``sentence-transformers``, dimension
-   1024, matching ``vector(1024)`` in ``schema/postgres/001_init.sql``. A
-   deterministic hash-based backend (``--mock-embeddings``) keeps the tests
+2. **embed** -- ``sentence-transformers/all-MiniLM-L6-v2`` (dim 384, ~90 MB),
+   matching ``vector(384)`` in ``schema/postgres/001_init.sql`` (migration
+   ``002_mini.sql`` from the former 1024-dim ``bge-m3`` layout).
+   ``MockEmbeddingBackend`` (``--mock-embeddings``, dim 384) keeps the tests
    offline and instant: same chunk text -> same vector;
 3. **write** -- one idempotent ``UPSERT`` into ``code_chunks`` keyed on
    ``(file_id, start_line, end_line)`` (the table's UNIQUE constraint), with
@@ -49,9 +50,9 @@ from models import (
 )
 
 EXTRACTOR = "nexus-devintel.ingestion.embedding_indexer"
-EXTRACTOR_VERSION = "0.1.0"
-EMBEDDING_MODEL = "BAAI/bge-m3"
-EMBEDDING_DIM = 1024
+EXTRACTOR_VERSION = "0.2.0"
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DIM = 384
 
 #: Lines per chunk: ~40 lines matches the granularity the hybrid retriever
 #: needs (a function plus its docstring) without blowing up the vector count.
@@ -281,22 +282,23 @@ class EmbeddingBackend:
         raise NotImplementedError
 
 
-class BgeM3Backend(EmbeddingBackend):
-    """The real backend: ``sentence-transformers`` + ``BAAI/bge-m3`` (dim 1024).
+class MiniLMBackend(EmbeddingBackend):
+    """The real backend: ``sentence-transformers`` + MiniLM-L6-v2 (dim 384).
 
-    Loaded lazily: importing sentence-transformers pulls torch (~2 GB), so the
-    module must stay importable for tests and ``--dry-run`` without the model
-    on disk. Normalization is on (bge models are trained for cosine similarity
-    on normalized vectors, which is exactly what pgvector's ``<=>`` expects).
+    ~90 MB download (vs ~2.3 GB for bge-m3), CPU-friendly: the whole 774-chunk
+    corpus encodes in ~1 minute on a laptop. Loaded lazily: importing
+    sentence-transformers pulls torch, so the module must stay importable for
+    tests and ``--dry-run`` without the model on disk. Normalization is on
+    (MiniLM is trained for cosine similarity on normalized vectors, which is
+    exactly what pgvector's ``<=>`` expects).
 
-    ``NEXUS_EMBEDDING_MODEL_PATH`` points at a local snapshot directory (e.g.
-    ``models/bge-m3`` filled by ``scripts/fetch_bge_m3.sh``) and skips the
-    hub entirely -- useful when HF connections stall.
+    ``NEXUS_EMBEDDING_MODEL_PATH`` points at a local snapshot directory and
+    skips the hub entirely -- useful when HF connections stall.
     """
 
     name = EMBEDDING_MODEL
 
-    def __init__(self, model_name: str | None = None, batch_size: int = 32) -> None:
+    def __init__(self, model_name: str | None = None, batch_size: int = 64) -> None:
         import os
 
         try:
@@ -328,6 +330,11 @@ class BgeM3Backend(EmbeddingBackend):
         return result
 
 
+#: Backwards-compatibility alias: the former default backend. Prefer
+#: ``MiniLMBackend`` (same interface, dim 384).
+BgeM3Backend = MiniLMBackend
+
+
 class MockEmbeddingBackend(EmbeddingBackend):
     """Deterministic hash vectors for offline tests and smoke runs.
 
@@ -336,7 +343,7 @@ class MockEmbeddingBackend(EmbeddingBackend):
     without torch or a model download.
     """
 
-    name = "mock-hash-1024"
+    name = "mock-hash-384"
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         vectors: list[list[float]] = []
@@ -351,31 +358,29 @@ class MockEmbeddingBackend(EmbeddingBackend):
 
 
 class HashingTokenBackend(EmbeddingBackend):
-    """Sparse bag-of-tokens vectors via feature hashing (stdlib-only, dim 1024).
+    """Sparse bag-of-tokens vectors via feature hashing (stdlib-only, dim 384).
 
-    The efficient alternative to the 2.3 GB ``bge-m3`` download when the goal
-    is a *working* hybrid retrieval rather than state-of-the-art semantics:
+    The offline fallback mirroring the real backend's dimension: zero
+    download, zero dependency (``hashlib`` + ``re`` only, 774 chunks embed in
+    ~1 second), with real token-level signal -- each token (plus
+    adjacent-token bigrams) owns hashed dimension(s), so two texts sharing
+    ``ssl`` / ``verify`` / ``certificate`` get a high cosine while unrelated
+    texts stay near zero. The mock backend hashes the *whole text* instead,
+    which carries no token-level similarity at all.
 
-    * **zero download, zero dependency** -- ``hashlib`` + ``re`` only, so it
-      runs wherever the test suite runs (774 chunks embed in ~1 second);
-    * **real token-level signal** -- each token (plus adjacent-token bigrams)
-      owns hashed dimension(s), so two texts sharing ``ssl`` / ``verify`` /
-      ``certificate`` get a high cosine while unrelated texts stay near zero.
-      The mock backend hashes the *whole text* instead, which carries no
-      token-level similarity at all;
-    * **pgvector-compatible** -- dim 1024, L2-normalized, cosine-ready, the
-      same contract as ``BgeM3Backend`` (signed hashing à la Vowpal Wabbit
-      to dampen collision bias);
-    * **deterministic** -- ``sha256``-based (never ``hash()``), so re-runs
-      are idempotent and the ``content_hash`` guards keep working.
+    pgvector-compatible: dim 384, L2-normalized, cosine-ready, the same
+    contract as ``MiniLMBackend`` (signed hashing a la Vowpal Wabbit to
+    dampen collision bias). Deterministic (``sha256``-based, never
+    ``hash()``), so re-runs are idempotent and the ``content_hash`` guards
+    keep working.
 
-    Honest labelling: ``name = "hashing-token-1024"``, stored in
-    ``code_chunks.embedding_model`` -- never masquerading as ``BAAI/bge-m3``.
-    A later bge-m3 pass simply re-embeds (``_filter_pending`` keys on the
-    model name, ``_upsert_chunk`` rewrites on model drift).
+    Honest labelling: ``name = "hashing-token-384"``, stored in
+    ``code_chunks.embedding_model`` -- a later MiniLM pass simply re-embeds
+    (``_filter_pending`` keys on the model name, ``_upsert_chunk`` rewrites
+    on model drift).
     """
 
-    name = "hashing-token-1024"
+    name = "hashing-token-384"
 
     def __init__(self, use_bigrams: bool = True) -> None:
         self._use_bigrams = use_bigrams
@@ -653,12 +658,13 @@ class EmbeddingIndexer:
 
 
 def _vector_literal(vector: Iterable[float]) -> str:
-    """``'[0.1,0.2,...]'`` -- pgvector's text input format for ``vector(1024)``."""
+    """``'[0.1,0.2,...]'`` -- pgvector's text input format for ``vector(384)``."""
     return "[" + ",".join(f"{value:.6f}" for value in vector) + "]"
 
 
 __all__ = [
-    "BgeM3Backend",
+    "BgeM3Backend",  # alias of MiniLMBackend (backwards compatibility)
+    "MiniLMBackend",
     "CHUNK_LINES",
     "CHUNK_OVERLAP",
     "CodeChunk",
