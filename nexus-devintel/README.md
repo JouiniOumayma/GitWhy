@@ -40,7 +40,7 @@ nexus-devintel/
 │   ├── load_neo4j.py           #    chargement idempotent (+ --dry-run)
 │   ├── impact.py               #    CLI Change Impact -> EvidencePath (+ --write)
 │   ├── root_cause.py           #    CLI Root Cause (+ --hybrid, --write)
-│   ├── index_embeddings.py     #    CLI indexation pgvector (hashing-token par défaut, --real-embeddings pour bge-m3)
+│   ├── index_embeddings.py     #    CLI indexation pgvector (MiniLM-L6-v2 par défaut, --hashing-embeddings hors ligne)
 │   ├── enrich_graphql.py       #    CLI enrichissement closingIssuesReferences
 │   ├── mcp_github.py           #    serveur MCP GitHub read-only (stdio)
 │   └── validate_fixtures.py    #    schéma + fermeture référentielle
@@ -191,7 +191,7 @@ nœud `:Evidence` (`--write` les persiste, idempotent).
 Localement :
 
 ```bash
-python -m pytest                       # 58 tests : contrats + fixtures + connecteur + impact
+python -m pytest                       # 140 tests : contrats, fixtures, connecteur, impact, root cause, hybride, sécurité
 python scripts/validate_fixtures.py    # fermeture référentielle des fixtures
 ```
 
@@ -244,9 +244,10 @@ Le point de conception à retenir : `:CLOSES` est modélisé sur `:PR` **et** su
 * Les deux services sont sur un réseau dédié, avec des **healthchecks** : ne lancez
   pas le loader avant que Neo4j soit `healthy`, sinon la première requête échoue.
 
-Dimensions d'embedding : `vector(1024)` (BAAI/bge-m3). Changer de modèle impose de
-modifier `001_init.sql` **et** de recréer le volume — c'est documenté en tête du
-fichier SQL.
+Dimensions d'embedding : `vector(384)` (sentence-transformers/all-MiniLM-L6-v2).
+Changer de modèle impose de modifier `001_init.sql` **et** de recréer le volume —
+c'est documenté en tête du fichier SQL (`002_mini.sql` migre une base existante
+1024 → 384 sans perdre la table `ingestion_runs`).
 
 ## 4. Fixtures (`fixtures/`)
 
@@ -272,15 +273,16 @@ bout en bout sur des données factices :
 # a) plan de chunking sans base de données
 python scripts/index_embeddings.py --dry-run
 
-# b) indexation par défaut : backend hashing-token-1024 (stdlib-only,
-#    similarité token réelle, ~0.5 s pour 774 chunks, zéro téléchargement)
+# b) indexation réelle (défaut) : sentence-transformers/all-MiniLM-L6-v2,
+#    dim 384, ~90 Mo de téléchargement, ~1 min pour ~774 chunks sur CPU
 python scripts/index_embeddings.py
 
-# c) legacy : whole-text hashes pour les tests offline
-python scripts/index_embeddings.py --mock-embeddings
+# c) repli offline stdlib : hashing-token-384, aucun téléchargement, aucun torch
+python scripts/index_embeddings.py --hashing-embeddings
 
-# d) la vraie indexation bge-m3, opt-in (pip install -r requirements-embeddings.txt, ~2.3 Go)
-python scripts/index_embeddings.py --real-embeddings
+# d) contenu réel vérifié (arbres HEAD + vrais blobs, cf. section 5)
+#    --prune supprime les lignes que ce run ne produit plus (corpus == run)
+python scripts/index_embeddings.py --real-content --from-api --ingest-tree --prune
 ```
 
 Design : ids de chunk conformes au schéma (`repo::path#L<s>-L<e>`), provenance
@@ -303,9 +305,8 @@ python scripts/enrich_graphql.py httpie/cli --dry-run
 # pass complet (~3 requêtes GraphQL pour ~280 PRs), MERGE idempotent
 python scripts/enrich_graphql.py httpie/cli
 
-# re-run ciblé, offline : compteurs factices
+# re-run ciblé sur la PR de la chaîne de démo (idempotent)
 python scripts/enrich_graphql.py httpie/cli --pr 1596
-python scripts/enrich_graphql.py httpie/cli --mock
 ```
 
 Lecture seule garantie : la requête est une constante de module (paramètres
@@ -328,13 +329,15 @@ python scripts/root_cause.py httpie/cli#issue-1583 --write
 
 # graphe + vecteurs : ajoute les preuves hybrid_search_code_chunks
 python scripts/root_cause.py httpie/cli#issue-1583 --hybrid \
-    --hybrid-query "SSL certificate verify failed" --hybrid-mock-embeddings
+    --hybrid-query "SSL certificate verify failed"
 ```
 
 `HybridRetriever` appelle la fonction SQL existante
 `hybrid_search_code_chunks` (fusion par rang réciproque lexical + HNSW),
-refuse toute dérive de dimension vs `vector(1024)`, et ancre chaque chunk vers
-son nœud de graphe (`File` / `Commit` / `Incident`).
+refuse toute dérive de dimension vs `vector(384)`, et ancre chaque chunk vers
+son nœud de graphe (`File` / `Commit` / `Incident`). `--hybrid` utilise MiniLM
+par défaut, comme l'indexeur ; `--hybrid-hashing-embeddings` bascule sur le
+repli stdlib (à utiliser seulement si l'index a été construit avec ce backend).
 
 ### 4. Garde-fous lecture seule (démo jury)
 
@@ -355,8 +358,7 @@ Phase 1 (pas en le dupliquant) :
 
 ```bash
 # arbre HEAD réel (265 fichiers) -> Neo4j, puis vrais corps via blobs API
-python scripts/index_embeddings.py --real-content --from-api --ingest-tree \
-    --mock-embeddings
+python scripts/index_embeddings.py --real-content --from-api --ingest-tree
 
 # variante avec un clone local (aucune requête API)
 python scripts/index_embeddings.py --real-content --repo-path ../httpie-cli
@@ -399,28 +401,42 @@ jury (`pytest tests/test_security.py -v`, section MCP).
 
 ### Vérification en conditions réelles (2026-09-22)
 
-Pipeline validé sur la stack Docker live (Neo4j 5.26 + PostgreSQL 16.15) :
+Pipeline validé sur la stack Docker live (Neo4j 5.26 + PostgreSQL 16.15 + pgvector),
+avec le **vrai backend d'embeddings** (`all-MiniLM-L6-v2`, dim 384) et sans aucun
+mock :
 
 1. `load_neo4j.py --apply-schema` → graphe de fixtures chargé, provenance
    vérifiée sur tous les nœuds ;
-2. `index_embeddings.py --mock-embeddings` → 509 chunks écrits, 509 vecteurs,
-   run tracé dans `ingestion_runs` ; **re-run → 0 écriture** (garde par
-   `content_hash`), l'idempotence est démontrable en direct ;
-3. `match_code_chunks` / `hybrid_search_code_chunks` → auto-similarité 1.0,
-   requête SSL : `incidents/1583` en rang lexical 1, `httpie/ssl_.py` en rang
-   vectoriel 1 ;
-4. `root_cause.py "httpie/cli#issue-1583" --write --hybrid` → EvidencePath
-   valide (score 0.63), 37 `Evidence` graphe + 10 hybrides persistées
-   (`MERGE` idempotent) ;
-5. enrichissement GraphQL réel : 817 PRs parcourues, **195 arêtes
-   `(:PR)-[:CLOSES]->(:Incident)`** à confidence 1.0 (vs 5 chaînes via git
-   log), 156 stubs PR, 136 incidents découverts ;
-6. contenu réel : arbre HEAD (265 `(:File)`) ingéré, **774 chunks dont 726
-   `git_blob_verified`** (vrai code httpie/cli en base) ;
-7. MCP live : `tools/call get_commit(7f03c52d)` et `get_file(ssl_.py,
-   verified=True)` répondent depuis GitHub via stdio ;
+2. `index_embeddings.py --real-content --from-api --ingest-tree --prune` →
+   arbre HEAD ingéré (265 `(:File)`), **774 chunks indexés dont 726
+   `git_blob_verified`** (vrai code httpie/cli), 773 vecteurs réels pour
+   `httpie/cli` + 1 pour `psf/requests`, **0 vecteur NULL** ; run tracé dans
+   `ingestion_runs` ;
+3. **re-run → `written: 0`, `embedded: 0`, `pruned: 0`** : l'idempotence
+   (`content_hash` + `embedding_model`) et le `--prune` sont démontrables en
+   direct, sans re-télécharger ni re-encoder ;
+4. `hybrid_search_code_chunks` avec MiniLM : requête « SSL certificate verify
+   failed » → `tests/test_ssl.py` (0.484), `httpie/cli/definition.py` (0.476),
+   `httpie/ssl_.py` (0.469) — le retrieval sémantique ramène bien le code réel
+   du correctif ;
+5. enrichissement GraphQL réel : 817 PRs parcourues, 156 avec
+   `closingIssuesReferences`, **195 arêtes `(:PR)-[:CLOSES]->(:Incident)` à
+   confidence 1.0** (`prov_source=github_graphql`) — à comparer aux 8 arêtes
+   `git` (0.95) et 1 `synthetic_fixture` (0.6) que le log local seul fournit ;
+6. `root_cause.py "httpie/cli#issue-1583" --write --hybrid` → EvidencePath
+   valide (**score 0.6327**), 15 fix commits, 5 PRs, 9 fichiers, 6 deployments,
+   48 `Evidence` persistées (`MERGE` idempotent) + preuves hybrides MiniLM ;
+7. MCP live : `mcp_github.py --list-tools` → 5 outils read-only
+   (`get_file`, `list_files`, `get_commit`, `get_pull_request`,
+   `search_issues`) ; `get_file` vérifie le contenu contre le blob SHA ;
 8. non-régression : `impact.py httpie/cli::httpie/context.py` retrouve les
-   22 dépendants directs / 37 transitifs documentés.
+   22 dépendants directs / 37 transitifs / profondeur 7 documentés ;
+9. sécurité : `pytest tests/test_security.py -v` → **17 tests d'attaque
+   passent** (mutation GraphQL refusée avant transport, `GraphWriter` en
+   whitelist, retrieval SELECT-only, MCP GET-only, analyseurs sans
+   `write`/`merge`/`delete`).
+
+Suite complète : `python -m pytest` → **140 tests**.
 
 > **Conflit de port 5432** : si un autre conteneur occupe déjà `5432` sur
 > l'hôte (cas fréquent en dev), `docker compose up` ne publiera **pas** le
@@ -433,6 +449,6 @@ Pipeline validé sur la stack Docker live (Neo4j 5.26 + PostgreSQL 16.15) :
 
 | Semaine | Suite |
 |---|---|
-| 2 | Ingestion réelle : clone → parser AST → Neo4j ; enrichissement GraphQL (`closingIssuesReferences`), embeddings `bge-m3` dans pgvector, branches + CI ; puis chargement des 1797 commits / 133 fichiers réels à la place des fixtures |
+| 2 | Ingestion réelle : clone → parser AST → Neo4j ; enrichissement GraphQL (`closingIssuesReferences`), embeddings `MiniLM-L6-v2` (dim 384) dans pgvector, branches + CI ; puis chargement des 1797 commits / 133 fichiers réels à la place des fixtures |
 | 3 | Retriever hybride (graphe + vecteurs) et agent LangGraph producteur d'`EvidencePath` |
 | 4 | Scoring de confiance calibré, évaluation sur un jeu de questions, UI de restitution |

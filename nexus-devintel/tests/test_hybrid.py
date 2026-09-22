@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from ingestion.embedding_indexer import MockEmbeddingBackend
+from ingestion.embedding_indexer import HashingTokenBackend
 from retrieval import HybridRetriever
 from retrieval.hybrid import HybridRetrievalError
 
@@ -103,7 +103,7 @@ def _row(chunk_suffix: str, rrf: float = 0.0328, vector_rank: int | None = 1,
 
 @pytest.fixture()
 def retriever() -> HybridRetriever:
-    return HybridRetriever("postgresql://unused", MockEmbeddingBackend(),
+    return HybridRetriever("postgresql://unused", HashingTokenBackend(),
                            repository_id="httpie/cli")
 
 
@@ -126,7 +126,7 @@ def test_rows_are_packaged_as_hybrid_evidence(monkeypatch: pytest.MonkeyPatch,
                                               retriever: HybridRetriever) -> None:
     monkeypatch.setattr("psycopg.connect", lambda dsn: _FakeConnection([_row("a")]))
     report = retriever.retrieve(QUERY)
-    assert report.backend_name == "mock-hash-384"
+    assert report.backend_name == "hashing-token-384"
     match = report.matches[0]
     assert match.citation == "httpie/ssl_a.py:221-245 (create_ssl_context)"
     evidence = report.evidences[0]
@@ -172,16 +172,18 @@ def test_dimension_drift_is_rejected(retriever: HybridRetriever) -> None:
         retriever.retrieve(QUERY)
 
 
-def test_missing_backend_falls_back_to_hashing_tokens(
+def test_missing_backend_loads_the_real_minilm(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """No backend configured -> stdlib hashing fallback (dim 384), not a crash."""
-    from ingestion.embedding_indexer import EMBEDDING_DIM
+    """No backend configured -> real MiniLM default (dim 384).
+
+    Needs torch + the model: skipped offline, pinned live during execution.
+    """
+    pytest.importorskip("sentence_transformers")
 
     monkeypatch.setattr("psycopg.connect", lambda dsn: _FakeConnection([_row("a")]))
     retriever = HybridRetriever("postgresql://unused", None)
     report = retriever.retrieve(QUERY)
-    assert report.backend_name == "hashing-token-384"
-    assert EMBEDDING_DIM == 384
+    assert report.backend_name == "sentence-transformers/all-MiniLM-L6-v2"
 
 
 def test_evidence_ids_are_stable(monkeypatch: pytest.MonkeyPatch,

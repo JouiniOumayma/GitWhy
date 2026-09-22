@@ -4,9 +4,9 @@ Three layers are pinned:
 
 * **chunking** -- stable chunk ids (``repo::path#L<s>-L<e>``), the fixture
   provenance carried onto every chunk, and the file/commit/incident split;
-* **backends** -- the mock backend is deterministic (same text -> same vector,
-  dim 384) so UPSERTs stay idempotent without torch; the hashing-token
-  backend (dim 384) carries real token-level similarity;
+* **backends** -- the hashing-token backend (dim 384, stdlib-only) is
+  deterministic so UPSERTs stay idempotent without torch, and carries real
+  token-level similarity; the real MiniLM backend shares the same dim;
 * **SQL shape** -- the UPSERT targets the UNIQUE ``(file_id, start_line,
   end_line)`` conflict target with a hash guard, and ``ingestion_runs`` is
   opened/closed around the run. A scripted fake cursor records every call, the
@@ -25,7 +25,7 @@ from ingestion.embedding_indexer import (
     CHUNK_LINES,
     CodeChunk,
     EmbeddingIndexer,
-    MockEmbeddingBackend,
+    HashingTokenBackend,
     chunk_commit_message,
     chunk_file,
     chunk_incident,
@@ -132,16 +132,18 @@ def test_incident_chunk_uses_synthetic_provenance() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Backends
+# Backends (real MiniLM dim + stdlib hashing fallback)
 # --------------------------------------------------------------------------- #
-def test_mock_backend_is_deterministic_and_384d() -> None:
-    backend = MockEmbeddingBackend()
+def test_hashing_backend_is_deterministic_and_384d() -> None:
+    from ingestion.embedding_indexer import EMBEDDING_DIM, HashingTokenBackend
+
+    backend = HashingTokenBackend()
     first = backend.embed(["ssl certificate verify failed"])
     second = backend.embed(["ssl certificate verify failed"])
     other = backend.embed(["unrelated text"])
     assert first == second
     assert first[0] != other[0]
-    assert len(first[0]) == 384
+    assert len(first[0]) == EMBEDDING_DIM == 384
 
 
 def test_hashing_backend_carries_token_level_similarity() -> None:
@@ -204,7 +206,7 @@ def test_upsert_is_idempotent_by_content_hash() -> None:
     indexer = EmbeddingIndexer("postgresql://unused", repository_id=REPO)
     connection = _FakeConnection()
     chunk = chunk_file(_file())[0]
-    vector = MockEmbeddingBackend().embed([chunk.text_for_embedding()])[0]
+    vector = HashingTokenBackend().embed([chunk.text_for_embedding()])[0]
 
     indexer._upsert_chunk(connection.cursor_obj, chunk, vector)
 
@@ -217,6 +219,45 @@ def test_upsert_is_idempotent_by_content_hash() -> None:
     metadata = json.loads(params[11])
     assert metadata["prov_source"] == "git"
     assert metadata["kind"] == "file"
+
+
+def test_upsert_refills_rows_whose_vector_was_dropped() -> None:
+    """A NULL embedding must be rewritten even when hash and model still match.
+
+    Regression: recreating the vector column (1024 -> 384 migration) empties it
+    while ``content_hash`` / ``embedding_model`` survive, so a hash-only guard
+    would treat those rows as "already embedded" and leave them unsearchable.
+    """
+    indexer = EmbeddingIndexer("postgresql://unused", repository_id=REPO)
+    connection = _FakeConnection()
+    chunk = chunk_file(_file())[0]
+    vector = HashingTokenBackend().embed([chunk.text_for_embedding()])[0]
+
+    indexer._upsert_chunk(connection.cursor_obj, chunk, vector)
+
+    query = connection.cursor_obj.statements[0][0]
+    assert "OR code_chunks.embedding IS NULL" in query
+
+
+def test_prune_deletes_rows_outside_the_current_chunk_set() -> None:
+    """``--prune`` keeps the stored corpus equal to the run, per repository."""
+    indexer = EmbeddingIndexer("postgresql://unused", repository_id=REPO)
+    connection = _FakeConnection()
+    chunks = chunk_file(_file())
+
+    pruned = indexer._prune_missing(connection.cursor_obj, chunks)
+
+    query, params = connection.cursor_obj.statements[0]
+    assert "DELETE FROM code_chunks" in query
+    assert "NOT IN" in query
+    assert "unnest(%s::text[], %s::int[], %s::int[])" in query
+    # Scoped to the repository: another repo's rows are never deleted.
+    assert params[0] == REPO
+    assert params[1] == [chunk.file_id for chunk in chunks]
+    assert params[2] == [chunk.start_line for chunk in chunks]
+    assert params[3] == [chunk.end_line for chunk in chunks]
+    # The rowcount reported by the cursor is surfaced as-is.
+    assert pruned == 1
 
 
 def test_index_report_counts_by_kind() -> None:

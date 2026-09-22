@@ -1,7 +1,7 @@
 # NEXUS-DevIntel — Phase 2 embedding extra (MiniLM, ~90 MB)
 # Install for the real indexing (default backend):
 #   pip install -r requirements-embeddings.txt
-# The mock/hashing backends (scripts/index_embeddings.py --mock-embeddings /
+# The stdlib hashing fallback (scripts/index_embeddings.py
 # --hashing-embeddings) and the whole test suite work without any of these:
 # torch is ~2 GB, keep it out of the CI path.
 -r requirements.txt

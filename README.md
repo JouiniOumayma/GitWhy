@@ -46,8 +46,10 @@ Neo4j Browser : http://localhost:7474 (`neo4j` / `user` en dev).
 - ✅ **Phase 2 (Personne B) terminée** : Root Cause `Incident → PR → Commit →
   File → Deployment` (requête Cypher bornée + score `produit(confidences) ×
   0.85^distance`), retrieval hybride graphe + pgvector (RRF k=60,
-  `lexical + HNSW cosinus`), backend d'embeddings par défaut
-  `hashing-token-1024` (stdlib-only, 0.5 s pour 774 chunks, `bge-m3` en
-  `--real-embeddings`), enrichissement GraphQL `closingIssuesReferences`
+  `lexical + HNSW cosinus`), embedder réel par défaut
+  `sentence-transformers/all-MiniLM-L6-v2` (dim 384, ~90 Mo, indexation réelle
+  des 774 chunks en ~1 min, `code_chunks.embedding_model` tracé par ligne),
+  repli offline stdlib `hashing-token-384` (`--hashing-embeddings`), aucun mock,
+  enrichissement GraphQL `closingIssuesReferences`
   (195 arêtes `CLOSES` confidence 1.0 vs 5 via git log), MCP GitHub read-only
   5 outils, 17 tests d'attaque `test_security.py`.

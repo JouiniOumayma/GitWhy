@@ -1,4 +1,4 @@
-"""Fixture tests: the mock graph must stay coherent and demo-relevant.
+"""Fixture tests: the fixture graph must stay coherent and demo-relevant.
 
 Two things are pinned here:
 

@@ -4,10 +4,9 @@
 Default backend: ``sentence-transformers/all-MiniLM-L6-v2`` (dim 384,
 ~90 MB download, ~1 min for 774 chunks on CPU)::
 
-    python scripts/index_embeddings.py --dry-run       # chunking plan, no DB
-    python scripts/index_embeddings.py                # real MiniLM embeddings
-    python scripts/index_embeddings.py --mock-embeddings    # offline tests only
-    python scripts/index_embeddings.py --hashing-embeddings # stdlib fallback, dim 384
+    python scripts/index_embeddings.py --dry-run           # chunking plan, no DB
+    python scripts/index_embeddings.py                    # real MiniLM embeddings
+    python scripts/index_embeddings.py --hashing-embeddings  # stdlib fallback (no torch)
 
 Week-3 Phase 2 usage (real content, read-only)::
 
@@ -41,7 +40,6 @@ from ingestion.content import (  # noqa: E402
 from ingestion.embedding_indexer import (  # noqa: E402
     EmbeddingIndexer,
     HashingTokenBackend,
-    MockEmbeddingBackend,
 )
 
 
@@ -104,14 +102,15 @@ def main() -> int:
                         help="PostgreSQL DSN (default: POSTGRES_DSN from .env)")
     parser.add_argument("--dry-run", action="store_true",
                         help="chunk and validate, but send nothing to PostgreSQL")
-    parser.add_argument("--mock-embeddings", action="store_true",
-                        help="use deterministic hash vectors (dim 384, offline tests only)")
     parser.add_argument("--hashing-embeddings", action="store_true",
                         help="use the stdlib hashing-token backend (dim 384, no download, "
                              "no torch: offline fallback with real token signal)")
     parser.add_argument("--real-embeddings", action="store_true",
                         help="deprecated alias: MiniLM is now the default "
                              "(kept for compatibility)")
+    parser.add_argument("--prune", action="store_true",
+                        help="delete this repository's rows that the current "
+                             "chunk set no longer produces (corpus == run)")
     parser.add_argument("--real-content", action="store_true",
                         help="index real file bodies instead of synthetic text")
     parser.add_argument("--repo-path", default=None,
@@ -176,10 +175,7 @@ def main() -> int:
         print(f"  real tree ingested into Neo4j: {written} new (:File) edges, "
               f"{len(extra_files)} files available for indexing")
 
-    if args.mock_embeddings:
-        indexer._backend = MockEmbeddingBackend()
-        print("embedding backend: mock-hash-384 (offline tests only)")
-    elif args.hashing_embeddings:
+    if args.hashing_embeddings:
         indexer._backend = HashingTokenBackend()
         print(f"embedding backend: {indexer._backend.name} (stdlib-only fallback)")
     else:
@@ -196,6 +192,7 @@ def main() -> int:
             Path(args.fixtures_dir),
             content_provider=provider,
             extra_files=extra_files,
+            prune=args.prune,
         )
     except RuntimeError as error:
         print(f"error: {error}", file=sys.stderr)
@@ -210,6 +207,8 @@ def main() -> int:
     print(f"  already embedded  : {report.skipped_hashes} (resumable skip, same model)")
     print(f"  embedded now      : {report.embedded_count}")
     print(f"  written (upserts) : {report.written_count}")
+    if args.prune:
+        print(f"  pruned (stale)    : {report.pruned_count}")
     for kind, count in sorted(report.by_kind.items()):
         print(f"  {kind:<18} {count}")
     if report.run_id:

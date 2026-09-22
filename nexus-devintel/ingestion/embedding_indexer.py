@@ -12,10 +12,7 @@ Pipeline (``EmbeddingIndexer``):
    incident bodies get deterministic pseudo-chunks (``#L1``) because the
    ``code_chunks`` table requires line bounds;
 2. **embed** -- ``sentence-transformers/all-MiniLM-L6-v2`` (dim 384, ~90 MB),
-   matching ``vector(384)`` in ``schema/postgres/001_init.sql`` (migration
-   ``002_mini.sql`` from the former 1024-dim ``bge-m3`` layout).
-   ``MockEmbeddingBackend`` (``--mock-embeddings``, dim 384) keeps the tests
-   offline and instant: same chunk text -> same vector;
+   matching ``vector(384)`` in ``schema/postgres/001_init.sql``;
 3. **write** -- one idempotent ``UPSERT`` into ``code_chunks`` keyed on
    ``(file_id, start_line, end_line)`` (the table's UNIQUE constraint), with
    ``content_hash`` guarding against embedding a stale body, plus one ledger
@@ -91,7 +88,7 @@ class CodeChunk:
     content_origin: str = ORIGIN_SYNTHETIC
 
     def text_for_embedding(self) -> str:
-        """``bge-m3`` is trained on raw text: no prefix, no markdown scaffolding."""
+        """MiniLM is trained on raw text: no prefix, no markdown scaffolding."""
         return self.content
 
 
@@ -285,8 +282,8 @@ class EmbeddingBackend:
 class MiniLMBackend(EmbeddingBackend):
     """The real backend: ``sentence-transformers`` + MiniLM-L6-v2 (dim 384).
 
-    ~90 MB download (vs ~2.3 GB for bge-m3), CPU-friendly: the whole 774-chunk
-    corpus encodes in ~1 minute on a laptop. Loaded lazily: importing
+    ~90 MB download, CPU-friendly: the whole 774-chunk corpus encodes in
+    ~1 minute on a laptop. Loaded lazily: importing
     sentence-transformers pulls torch, so the module must stay importable for
     tests and ``--dry-run`` without the model on disk. Normalization is on
     (MiniLM is trained for cosine similarity on normalized vectors, which is
@@ -330,33 +327,6 @@ class MiniLMBackend(EmbeddingBackend):
         return result
 
 
-#: Backwards-compatibility alias: the former default backend. Prefer
-#: ``MiniLMBackend`` (same interface, dim 384).
-BgeM3Backend = MiniLMBackend
-
-
-class MockEmbeddingBackend(EmbeddingBackend):
-    """Deterministic hash vectors for offline tests and smoke runs.
-
-    Not semantically meaningful -- only stable: the same text always yields the
-    same vector, so UPSERTs stay idempotent and tests can assert exact rows
-    without torch or a model download.
-    """
-
-    name = "mock-hash-384"
-
-    def embed(self, texts: Sequence[str]) -> list[list[float]]:
-        vectors: list[list[float]] = []
-        for text in texts:
-            digest = hashlib.sha256(text.encode("utf-8")).digest()
-            raw = [byte for index in range(EMBEDDING_DIM) for byte in
-                   digest[(index * 3) % len(digest):][:1]]
-            # Normalize to unit length, like the real backend does.
-            norm = sum(value * value for value in raw) ** 0.5 or 1.0
-            vectors.append([round(value / norm, 6) for value in raw])
-        return vectors
-
-
 class HashingTokenBackend(EmbeddingBackend):
     """Sparse bag-of-tokens vectors via feature hashing (stdlib-only, dim 384).
 
@@ -365,8 +335,7 @@ class HashingTokenBackend(EmbeddingBackend):
     ~1 second), with real token-level signal -- each token (plus
     adjacent-token bigrams) owns hashed dimension(s), so two texts sharing
     ``ssl`` / ``verify`` / ``certificate`` get a high cosine while unrelated
-    texts stay near zero. The mock backend hashes the *whole text* instead,
-    which carries no token-level similarity at all.
+    texts stay near zero.
 
     pgvector-compatible: dim 384, L2-normalized, cosine-ready, the same
     contract as ``MiniLMBackend`` (signed hashing a la Vowpal Wabbit to
@@ -421,6 +390,7 @@ class IndexReport:
     written_count: int = 0
     skipped_hashes: int = 0
     already_embedded: int = 0
+    pruned_count: int = 0
     by_kind: dict[str, int] = field(default_factory=dict)
     run_id: str | None = None
 
@@ -430,7 +400,9 @@ class EmbeddingIndexer:
 
     Usage::
 
-        indexer = EmbeddingIndexer(dsn, backend=MockEmbeddingBackend())
+        indexer = EmbeddingIndexer(dsn)                    # real MiniLM
+        indexer = EmbeddingIndexer(dsn, backend=HashingTokenBackend())
+
         report = indexer.index_fixtures(Path("fixtures"))
     """
 
@@ -472,13 +444,19 @@ class EmbeddingIndexer:
     # ---- indexing --------------------------------------------------------- #
     def index_fixtures(self, fixtures_dir: Path, *, dry_run: bool = False,
                        batch_size: int = 64, content_provider: Any = None,
-                       extra_files: list[File] | None = None) -> IndexReport:
+                       extra_files: list[File] | None = None,
+                       prune: bool = False) -> IndexReport:
         """Full pipeline. ``dry_run`` stops right before any SQL is sent.
 
         Resumable: chunks already embedded with the *same model* (same
         ``content_hash`` + ``embedding_model`` row) are skipped before the
-        backend runs, so a long bge-m3 run interrupted midway can be replayed
-        without re-embedding (or re-paying for) what is already stored.
+        backend runs, so a long real-embedding run interrupted midway can be
+        replayed without re-embedding (or re-paying for) what is already
+        stored.
+
+        ``prune`` deletes the repository's rows that this run did not produce
+        (dropped fixture, renamed file, re-chunked span), so the indexed corpus
+        matches the run exactly instead of accumulating history.
         """
         chunks = self.build_chunks(fixtures_dir, content_provider=content_provider,
                                    extra_files=extra_files)
@@ -492,12 +470,12 @@ class EmbeddingIndexer:
         assert self._backend is not None, "a backend is required to write"
         pending = self._filter_pending(chunks)
         report.skipped_hashes = len(chunks) - len(pending)
-        if not pending:
+        if not pending and not prune:
             return report
 
         import psycopg
 
-        # Batch-granular commits: a CPU bge-m3 run can take longer than any
+        # Batch-granular commits: a CPU MiniLM run can take longer than any
         # single shell timeout -- every committed batch is durable and the
         # next run resumes after it (see _filter_pending).
         with psycopg.connect(self._dsn) as connection:
@@ -511,6 +489,10 @@ class EmbeddingIndexer:
                     with connection.cursor() as cursor:
                         for chunk, vector in zip(window, vectors):
                             report.written_count += self._upsert_chunk(cursor, chunk, vector)
+                    connection.commit()
+                if prune:
+                    with connection.cursor() as cursor:
+                        report.pruned_count = self._prune_missing(cursor, chunks)
                     connection.commit()
             except Exception:
                 self._fail_run(connection, run_id, report)
@@ -531,6 +513,32 @@ class EmbeddingIndexer:
             connection.commit()
         except Exception:  # noqa: BLE001 - already in a failure path
             pass
+
+    def _prune_missing(self, cursor: Any, chunks: list[CodeChunk]) -> int:
+        """Delete this repository's rows that the current chunk set no longer has.
+
+        The index is an ``UPSERT``: without pruning, chunks that disappeared
+        upstream (renamed file, re-chunked span, edited fixture) stay
+        searchable forever and skew the hybrid ranking. Matching is on the
+        conflict key ``(file_id, start_line, end_line)``, so rows for other
+        repositories are never touched.
+        """
+        cursor.execute(
+            """
+            DELETE FROM code_chunks
+            WHERE repository_id = %s
+              AND (file_id, start_line, end_line) NOT IN (
+                  SELECT * FROM unnest(%s::text[], %s::int[], %s::int[])
+              )
+            """,
+            (
+                self._repository_id,
+                [chunk.file_id for chunk in chunks],
+                [chunk.start_line for chunk in chunks],
+                [chunk.end_line for chunk in chunks],
+            ),
+        )
+        return cursor.rowcount or 0
 
     def _filter_pending(self, chunks: list[CodeChunk]) -> list[CodeChunk]:
         """Drop chunks already embedded with the current model (resumability)."""
@@ -595,6 +603,10 @@ class EmbeddingIndexer:
                     metadata = EXCLUDED.metadata
             WHERE code_chunks.content_hash IS DISTINCT FROM EXCLUDED.content_hash
                OR code_chunks.embedding_model IS DISTINCT FROM EXCLUDED.embedding_model
+               -- A row whose vector was dropped (dimension migration, manual
+               -- DELETE) must be refilled even if its hash is unchanged:
+               -- otherwise "already embedded" rows stay silently unsearchable.
+               OR code_chunks.embedding IS NULL
             """,
             (
                 chunk.repository_id,
@@ -641,6 +653,7 @@ class EmbeddingIndexer:
                     "chunks": report.chunk_count,
                     "embedded": report.embedded_count,
                     "written": report.written_count,
+                    "pruned": report.pruned_count,
                     "by_kind": report.by_kind,
                 }), run_id),
             )
@@ -663,8 +676,6 @@ def _vector_literal(vector: Iterable[float]) -> str:
 
 
 __all__ = [
-    "BgeM3Backend",  # alias of MiniLMBackend (backwards compatibility)
-    "MiniLMBackend",
     "CHUNK_LINES",
     "CHUNK_OVERLAP",
     "CodeChunk",
@@ -674,7 +685,7 @@ __all__ = [
     "EmbeddingIndexer",
     "HashingTokenBackend",
     "IndexReport",
-    "MockEmbeddingBackend",
+    "MiniLMBackend",
     "chunk_commit_message",
     "chunk_file",
     "chunk_incident",

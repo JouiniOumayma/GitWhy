@@ -93,7 +93,9 @@ class HybridRetriever:
 
     Usage::
 
-        retriever = HybridRetriever(dsn, backend=MockEmbeddingBackend())
+        retriever = HybridRetriever(dsn)                  # real MiniLM
+        retriever = HybridRetriever(dsn, HashingTokenBackend())
+
         report = retriever.retrieve("SSL certificate verify failed")
     """
 
@@ -108,12 +110,10 @@ class HybridRetriever:
                  path_regex: str | None = None) -> HybridReport:
         """Run the hybrid search; ``path_regex`` narrows to a subtree (read-only)."""
         if self._backend is None:
-            from ingestion.embedding_indexer import HashingTokenBackend
+            from ingestion.embedding_indexer import MiniLMBackend
 
-            # Default backend: hashing-token (stdlib-only, dim 384). Pass an
-            # explicit backend (MiniLMBackend, MockEmbeddingBackend) to
-            # override.
-            self._backend = HashingTokenBackend()
+            # Default backend: real MiniLM, matching the indexer's default.
+            self._backend = MiniLMBackend()
         embedding = self._backend.embed([query])[0]
         if len(embedding) != EMBEDDING_DIM:
             raise HybridRetrievalError(

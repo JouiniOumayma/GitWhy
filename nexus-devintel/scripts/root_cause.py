@@ -63,9 +63,6 @@ def main() -> int:
                              "merge its evidence into the report")
     parser.add_argument("--hybrid-query", default=None,
                         help="query text for --hybrid (default: the incident title)")
-    parser.add_argument("--hybrid-mock-embeddings", action="store_true",
-                        help="use deterministic hash vectors for --hybrid "
-                             "(offline tests only, dim 384)")
     parser.add_argument("--hybrid-hashing-embeddings", action="store_true",
                         help="use the stdlib hashing-token backend for --hybrid "
                              "(dim 384, no torch)")
@@ -100,16 +97,12 @@ def main() -> int:
                 from ingestion.embedding_indexer import (
                     HashingTokenBackend,
                     MiniLMBackend,
-                    MockEmbeddingBackend,
                 )
                 from retrieval import HybridRetriever
 
                 dsn = os.environ.get("POSTGRES_DSN") or \
                     "postgresql://nexus:nexus@localhost:5432/nexus"
-                if args.hybrid_mock_embeddings:
-                    # Only correct against an index built with --mock-embeddings.
-                    backend = MockEmbeddingBackend()
-                elif args.hybrid_hashing_embeddings:
+                if args.hybrid_hashing_embeddings:
                     backend = HashingTokenBackend()
                 else:
                     # Default: real MiniLM, matching the indexer's default.

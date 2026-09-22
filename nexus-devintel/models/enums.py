@@ -29,7 +29,7 @@ class SourceKind(StrEnum):
     ISSUE_TRACKER = "issue_tracker"
     MANUAL = "manual"
     DERIVED = "derived"  # computed by the ingestion pipeline (e.g. IMPORTS edges)
-    SYNTHETIC = "synthetic_fixture"  # mock data, never trust for RCA
+    SYNTHETIC = "synthetic_fixture"  # hand-written fixture text, never trust for RCA
 
 
 class NodeKind(StrEnum):

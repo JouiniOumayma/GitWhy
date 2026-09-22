@@ -184,7 +184,7 @@ def _stub_psycopg(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_hybrid_retrieval_sends_only_selects(monkeypatch: pytest.MonkeyPatch,
                                              _stub_psycopg: None) -> None:
-    from ingestion.embedding_indexer import MockEmbeddingBackend
+    from ingestion.embedding_indexer import HashingTokenBackend
     from retrieval import HybridRetriever
 
     recorded: list[str] = []
@@ -217,7 +217,7 @@ def test_hybrid_retrieval_sends_only_selects(monkeypatch: pytest.MonkeyPatch,
             return None
 
     monkeypatch.setattr(sys.modules["psycopg"], "connect", lambda dsn: _Connection())
-    retriever = HybridRetriever("postgresql://unused", MockEmbeddingBackend())
+    retriever = HybridRetriever("postgresql://unused", HashingTokenBackend())
     retriever.retrieve("anything")
     assert recorded, "the retriever must talk to PostgreSQL"
     for query in recorded:

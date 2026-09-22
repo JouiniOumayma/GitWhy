@@ -9,8 +9,8 @@ Week-2 Phase 2 usage (stack running, fixtures loaded, GITHUB_TOKEN set)::
     # idempotent targeted re-run on the demo chain's PR
     python scripts/enrich_graphql.py httpie/cli --pr 1596
 
-    # see what would be written, without a token and without Neo4j
-    python scripts/enrich_graphql.py httpie/cli --dry-run --mock
+    # see what would be written, without writing anything (needs a token)
+    python scripts/enrich_graphql.py httpie/cli --dry-run
 
 Read-only guarantee: the GraphQL client refuses mutations before transport;
 the only writes are idempotent ``MERGE``s into the local Neo4j.
@@ -28,11 +28,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from ingestion.github_graphql import (  # noqa: E402
-    ClosingIssue,
     ClosingIssuesEnricher,
     EnrichmentStats,
     GitHubGraphQLClient,
-    PullRequestLinks,
     build_close_edges,
 )
 
@@ -57,26 +55,6 @@ def _print_stats(stats: EnrichmentStats) -> None:
     print(f"  incidents discovered      : {len(stats.incidents_discovered or set())}")
 
 
-def _mock_stats(repository_id: str) -> EnrichmentStats:
-    """Offline demo of the counters, shaped like a real pass on httpie/cli."""
-    demo = PullRequestLinks(
-        number=1596,
-        title="Fix SSL context creation",
-        url=f"https://github.com/{repository_id}/pull/1596",
-        closed_at="2024-07-01T00:00:00Z",
-        closing_issues=[
-            ClosingIssue(number=1583, title="SSL verify failed", url=None,
-                         closed_at="2024-11-01T00:00:00Z"),
-        ],
-    )
-    stats = EnrichmentStats()
-    stats.prs_seen = 281
-    stats.prs_with_closing_issues = 1
-    stats.edges_built = len(build_close_edges(demo, repository_id=repository_id))
-    stats.incidents_discovered = {1583}
-    return stats
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repository_id", help="owner/name, e.g. httpie/cli")
@@ -89,16 +67,9 @@ def main() -> int:
                              "(edges whose PR is missing will be skipped)")
     parser.add_argument("--dry-run", action="store_true",
                         help="fetch and report, but write nothing (needs a token)")
-    parser.add_argument("--mock", action="store_true",
-                        help="offline demo: fake counters, no network, no Neo4j")
     args = parser.parse_args()
 
     _load_dotenv(PROJECT_ROOT / ".env")
-
-    if args.mock:
-        print("== Mock enrichment pass (no network, no writes) ==")
-        _print_stats(_mock_stats(args.repository_id))
-        return 0
 
     try:
         client = GitHubGraphQLClient()
