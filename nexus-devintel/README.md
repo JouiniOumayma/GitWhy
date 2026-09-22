@@ -339,6 +339,31 @@ rejeté avant tout octet réseau, label/relation Neo4j injectée refusée par la
 whitelist du `GraphWriter`, surface PostgreSQL vérifiée SELECT-only, aucune
 méthode mutante sur les clients.
 
+### Vérification en conditions réelles (2026-09-22)
+
+Pipeline validé sur la stack Docker live (Neo4j 5.26 + PostgreSQL 16.15) :
+
+1. `load_neo4j.py --apply-schema` → graphe de fixtures chargé, provenance
+   vérifiée sur tous les nœuds ;
+2. `index_embeddings.py --mock-embeddings` → 509 chunks écrits, 509 vecteurs,
+   run tracé dans `ingestion_runs` ; **re-run → 0 écriture** (garde par
+   `content_hash`), l'idempotence est démontrable en direct ;
+3. `match_code_chunks` / `hybrid_search_code_chunks` → auto-similarité 1.0,
+   requête SSL : `incidents/1583` en rang lexical 1, `httpie/ssl_.py` en rang
+   vectoriel 1 ;
+4. `root_cause.py "httpie/cli#issue-1583" --write --hybrid` → EvidencePath
+   valide (score 0.63), 37 `Evidence` graphe + 10 hybrides persistées
+   (`MERGE` idempotent) ;
+5. non-régression : `impact.py httpie/cli::httpie/context.py` retrouve les
+   22 dépendants directs / 37 transitifs documentés.
+
+> **Conflit de port 5432** : si un autre conteneur occupe déjà `5432` sur
+> l'hôte (cas fréquent en dev), `docker compose up` ne publiera **pas** le
+> port de `nexus-postgres` et échouera silencieusement — la requête tombera
+> sur l'autre PostgreSQL avec une erreur d'authentification déroutante.
+> Vérifier avec `docker port nexus-postgres`, puis déplacer le port via
+> `POSTGRES_PORT=5433` dans `.env` et `POSTGRES_DSN` en conséquence.
+
 ## Roadmap
 
 | Semaine | Suite |

@@ -267,11 +267,16 @@ class RootCauseAnalyzer:
 
     @staticmethod
     def _rationale(row: dict[str, Any], distance: int) -> str:
-        """Explain the hop through the actual relation chain, for auditability."""
+        """Explain the hop through the actual relation chain, for auditability.
+
+        The distance is always stated: ``EvidenceHop.step`` is the *position*
+        in the path, not the traversal distance, and confusing the two in a
+        jury demo would misread the graph.
+        """
         rel_types = list(row["rel_types"] or [])
         if not rel_types:
             return "directly linked to the incident"
-        return f"reached in {distance} hop(s) via {' -> '.join(rel_types)}"
+        return f"reached at distance {distance} via {' -> '.join(rel_types)}"
 
     @staticmethod
     def _format_chain(row: dict[str, Any]) -> list[str]:

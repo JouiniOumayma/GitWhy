@@ -131,8 +131,10 @@ def main() -> int:
             print(f"    {element}")
     print("  evidence hops:")
     for hop in path.hops[:12]:
-        print(f"    {hop.score:>6.3f}  d{hop.step:<3} {hop.node_kind.value:<11} "
+        print(f"    {hop.score:>6.3f}  #{hop.step:<3} {hop.node_kind.value:<11} "
               f"{hop.node_id}  via {hop.relation_in or '-'}")
+        if hop.rationale and hop.rationale.startswith("reached"):
+            print(f"           {hop.rationale}")
     if not path.hops[1:]:
         print("    (none: this incident has no linked PR/commit/file in the graph)")
     if hybrid_report:
