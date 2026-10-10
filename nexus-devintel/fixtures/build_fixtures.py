@@ -1253,8 +1253,8 @@ def build_evidence_and_answers() -> tuple[list[Evidence], list[Answer]]:
                 vector={
                     "table": "evidence_embeddings",
                     "row_id": ev_id,
-                    "model": "BAAI/bge-m3",
-                    "dim": 1024,
+                    "model": "sentence-transformers/all-MiniLM-L6-v2",
+                    "dim": 384,
                     "distance": None,
                 },
                 retrieved_at=INGESTED_AT,

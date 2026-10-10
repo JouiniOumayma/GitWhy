@@ -18,3 +18,9 @@ venv/
 # Local database dumps produced while experimenting
 *.dump
 *.sql.gz
+.blob_cache/
+_verify/
+/models/minilm-l6-v2/
+rca_*.json
+rca_demo.json
+

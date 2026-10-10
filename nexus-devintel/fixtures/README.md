@@ -98,8 +98,9 @@ purement dérivé (recalculable), il sert au *diff* quand on re-curate.
 ## Couche pgvector
 
 `scripts/load_neo4j.py --with-pgvector` insère une ligne `evidence_embeddings` par
-nœud `Evidence`, **avec `embedding = NULL`**. C'est voulu : le projet n'embarque
-aucun modèle d'embedding, c'est le pipeline d'ingestion (Semaine 2) qui appellera
-`BAAI/bge-m3` (1024 dims) et fera l'`UPDATE`. Le schéma, les index HNSW et les
-fonctions `match_code_chunks` / `hybrid_search_code_chunks` sont en place et
-testables dès maintenant, notamment en comparant deux preuves déjà présentes.
+nœud `Evidence`, **avec `embedding = NULL`**. C'est voulu : les fixtures ne
+portent aucun vecteur, c'est le pipeline d'ingestion (Semaine 2) qui appelle
+`sentence-transformers/all-MiniLM-L6-v2` (384 dims) et fera l'`UPDATE`. Le
+schéma, les index HNSW et les fonctions `match_code_chunks` /
+`hybrid_search_code_chunks` sont en place et testables dès maintenant, notamment
+en comparant deux preuves déjà présentes.
