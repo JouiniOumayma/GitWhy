@@ -1,27 +1,9 @@
-"""Client LLM Mistral — T3 : minimum viable, budget au niveau des agents.
+"""Client LLM — T3 : MistralClient (original) + GeminiClient (ajout).
 
-Choix retenu (option "SDK brut" du plan): un appel HTTP **direct** à
-l'endpoint officiel ``/chat/completions`` via ``urllib.request`` — le même
-stdlib-only que ``ingestion/github_client.py`` — au lieu du SDK
-``mistralai``, qui ramènerait httpx et torch-adjacent pour un seul POST.
-Ce qui change pour la soutenance : rien, l'API est la même ; ce qu'on
-gagne : aucune dépendance, un transport injectable en 3 lignes pour les
-tests.
-
-Séparation des responsabilités (à expliquer en soutenenance) :
-
-* **transport** (ce module) : POST + timeout + parse de la réponse.
-    Il ne connaît ni le graphe, ni l'état des agents ;
-* **budget** (``agents.state``) : chaque nœud LangGraph vérifie
-  ``can_call_llm`` *avant* d'appeler ``chat()`` et fusionne
-  ``llm_call_patch()`` *après* — le quota reste ainsi visible dans l'état
-  de l'agent, pas enfoui dans un client ;
-* **outils** (``agents.tools``) : les preuves proviennent uniquement de la
-  whitelist read-only, jamais des dires d'un LLM.
-
-``json_mode=True`` : demande la sortie JSON structurée à l'API (le Critic
-l'utilise) et la parse de façon stricte — un JSON invalide est une
-:class:`LlmProtocolError`, jamais un "content" approximatif passé au Critic.
+Les deux clients partagent la même interface : ``chat(system, user, *, json_mode)``
+renvoie un ``LlmOutput``. Le transport est urllib stdlib-only, aucune dépendance
+externe. ``create_app_from_env`` choisit Gemini si ``GEMINI_API_KEY`` est défini,
+sinon Mistral si ``MISTRAL_API_KEY`` est défini, sinon ``None`` (mode dégradé).
 """
 
 from __future__ import annotations
@@ -36,12 +18,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "MistralClient",
+    "GeminiClient",
     "LlmError",
     "LlmOutput",
     "LlmProtocolError",
 ]
 
 DEFAULT_ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
+GEMINI_ENDPOINT_TPL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+)
 
 #: Transport injectable pour les tests : (url, headers, body_bytes, timeout) -> dict
 Transport = Callable[[str, dict[str, str], bytes, float], dict[str, Any]]
@@ -86,14 +72,11 @@ def _default_transport(
     try:
         return json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise LlmError("réponse non-JSON de l'API Mistral") from exc
+        raise LlmError("réponse non-JSON de l'API") from exc
 
 
 class MistralClient:
-    """Wrapper minimal sur l'API de chat completion.
-
-    ``transport`` est injectable (tests) : par défaut le POST urllib.
-    """
+    """Wrapper minimal sur l'API de chat completion Mistral."""
 
     def __init__(
         self,
@@ -113,11 +96,10 @@ class MistralClient:
         self._transport = transport or _default_transport
 
     @classmethod
-    def from_env(cls, *, default_timeout_s: float = 45.0) -> MistralClient | None:
+    def from_env(cls, *, default_timeout_s: float = 45.0) -> "MistralClient | None":
         """Fabrique : lit ``MISTRAL_API_KEY`` (+ ``NEXUS_LLM_MODEL`` si présent).
 
-        Renvoie ``None`` si la clé est absente : les agents doivent alors
-        fonctionner **sans** LLM — réponses par preuve seule, escalade.
+        Renvoie ``None`` si la clé est absente.
         """
         api_key = os.environ.get("MISTRAL_API_KEY", "").strip()
         if not api_key:
@@ -125,7 +107,6 @@ class MistralClient:
         model = os.environ.get("NEXUS_LLM_MODEL", "").strip() or "mistral-small-latest"
         return cls(api_key, model=model, timeout_s=default_timeout_s)
 
-    # ------------------------------------------------------------------ #
     def chat(self, system: str, user: str, *, json_mode: bool = False) -> LlmOutput:
         """UN appel, un texte. Le quota est géré côté état, pas ici."""
         payload: dict[str, Any] = {
@@ -176,9 +157,7 @@ class MistralClient:
         usage = data.get("usage") if isinstance(data, dict) else None
         if not isinstance(usage, dict):
             return {}
-        keys = (
-            "prompt_tokens", "completion_tokens", "total_tokens",
-        )
+        keys = ("prompt_tokens", "completion_tokens", "total_tokens",)
         return {key: int(usage[key]) for key in keys if isinstance(usage.get(key), int)}
 
     @staticmethod
@@ -191,3 +170,105 @@ class MistralClient:
         if not isinstance(data, dict):
             raise LlmProtocolError("le LLM a renvoyé un JSON non-objet")
         return data
+
+
+# --------------------------------------------------------------------------- #
+# Client Gemini (Google AI Studio) — même interface que MistralClient         #
+# --------------------------------------------------------------------------- #
+
+class GeminiClient:
+    """Wrapper minimal sur l'API Gemini (Google AI Studio).
+
+    Interface identique à ``MistralClient`` : ``chat(system, user, *, json_mode)``
+    renvoie un ``LlmOutput``. Transport urllib stdlib-only, zéro dépendance.
+
+    ``json_mode=True`` passe ``response_mime_type: application/json`` dans
+    ``generationConfig`` — Gemini renvoie alors du JSON garanti valide.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        model: str = "gemini-2.5-flash",
+        timeout_s: float = 45.0,
+        transport: Transport | None = None,
+    ) -> None:
+        if not api_key:
+            raise ValueError("api_key vide : pas d'appel Gemini possible")
+        self._api_key = api_key
+        self._model = model
+        self._timeout_s = timeout_s
+        self._transport = transport or _default_transport
+
+    @classmethod
+    def from_env(cls, *, default_timeout_s: float = 45.0) -> "GeminiClient | None":
+        """Fabrique : lit ``GEMINI_API_KEY`` (+ ``NEXUS_LLM_MODEL`` si présent).
+
+        Renvoie ``None`` si la clé est absente.
+        """
+        api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        if not api_key:
+            return None
+        model = os.environ.get("NEXUS_LLM_MODEL", "").strip() or "gemini-2.5-flash"
+        return cls(api_key, model=model, timeout_s=default_timeout_s)
+
+    def chat(self, system: str, user: str, *, json_mode: bool = False) -> LlmOutput:
+        """UN appel vers l'API Gemini generateContent.
+
+        Les clés au format ``AQ.`` (nouveau format Google AI Studio) sont
+        transmises via l'en-tête ``x-goog-api-key`` plutôt qu'en query-param
+        ``?key=`` pour éviter les 404 de routage de l'API.
+        """
+        url = GEMINI_ENDPOINT_TPL.format(model=self._model)
+
+        payload: dict[str, Any] = {
+            "system_instruction": {"parts": [{"text": system}]},
+            "contents": [{"role": "user", "parts": [{"text": user}]}],
+        }
+        if json_mode:
+            payload["generationConfig"] = {"response_mime_type": "application/json"}
+
+        body = json.dumps(payload).encode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "NEXUS-DevIntel-agents/0.1",
+            # Les clés AQ. nécessitent le header x-goog-api-key (pas query-param)
+            "x-goog-api-key": self._api_key,
+        }
+
+        try:
+            data = self._transport(url, headers, body, self._timeout_s)
+        except LlmError:
+            raise
+        except urllib.error.HTTPError as exc:
+            raise LlmError(f"HTTP {exc.code} : {exc.reason}") from exc
+        except urllib.error.URLError as exc:
+            raise LlmError(f"réseau inaccessible : {exc.reason}") from exc
+
+        # Extraction du texte depuis la réponse Gemini
+        candidates = data.get("candidates") if isinstance(data, dict) else None
+        if not isinstance(candidates, list) or not candidates:
+            raise LlmError(f"réponse Gemini sans 'candidates': {data}")
+
+        parts = (candidates[0].get("content") or {}).get("parts") or []
+        content = parts[0].get("text", "") if parts else ""
+
+        usage_meta = data.get("usageMetadata") or {}
+        token_usage = {
+            "prompt_tokens": int(usage_meta.get("promptTokenCount", 0)),
+            "completion_tokens": int(usage_meta.get("candidatesTokenCount", 0)),
+            "total_tokens": int(usage_meta.get("totalTokenCount", 0)),
+        }
+
+        output = LlmOutput(
+            model=self._model,
+            content=content if isinstance(content, str) else "",
+            token_usage=token_usage,
+        )
+        if json_mode:
+            output = output.model_copy(
+                update={"data": MistralClient._strict_json(output.content)}
+            )
+        return output
