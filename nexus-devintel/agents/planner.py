@@ -63,6 +63,10 @@ class RouteDecision:
     method: str
     #: appels LLM déjà dépensés pour classer (réduits du budget agent)
     llm_calls: int
+    #: verdict final du Critic ("accept"/"retry"/"escalate"/"") — logs T7
+    critic_verdict: str = ""
+    #: preuves produites par l'agent, pour la persistance exacte (T7)
+    evidences: tuple = ()
 
 
 def classify(question: str) -> AnswerIntent | None:
@@ -150,7 +154,13 @@ def route(
         route=intent,
         budget=_budget_after_planning(budget, used),
     )
-    answer = agent.invoke(state)["answer"]
+    final_state = agent.invoke(state)
+    answer = final_state["answer"]
     return answer, RouteDecision(
-        question=question, intent=intent, method=method, llm_calls=used,
+        question=question,
+        intent=intent,
+        method=method,
+        llm_calls=used,
+        critic_verdict=getattr(final_state.get("critic_verdict"), "value", ""),
+        evidences=tuple(final_state.get("evidences") or ()),
     )

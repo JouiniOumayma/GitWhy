@@ -144,6 +144,9 @@ class ToolRegistry:
             ),
         }
         self._names: frozenset[str] = frozenset(self._tools)
+        #: observateur optionnel des appels (logs structurés T7) ; un hook
+        #: ne peut JAMAIS modifier la whitelist ni le résultat.
+        self._on_call: Callable[[str, ToolResult], None] | None = None
 
     # ------------------------------------------------------------------ #
     # Dispatch                                                            #
@@ -158,9 +161,27 @@ class ToolRegistry:
             )
         try:
             value = tool.fn(**args)
+            result = ToolResult(name=name, ok=True, value=value)
         except Exception as exc:  # noqa: BLE001 - l'echec EST le resultat utile
-            return ToolResult(name=name, ok=False, error=f"{type(exc).__name__}: {exc}")
-        return ToolResult(name=name, ok=True, value=value)
+            result = ToolResult(name=name, ok=False, error=f"{type(exc).__name__}: {exc}")
+        self._trace(name, result)
+        return result
+
+    # ------------------------------------------------------------------ #
+    # Observabilité (T7) : la collecte n'altère jamais whitelist/résultat #
+    # ------------------------------------------------------------------ #
+    def set_call_callback(self, callback: Callable[[str, ToolResult], None] | None) -> None:
+        """Installe/retire un observateur d'appels (``None`` pour retirer)."""
+        self._on_call = callback
+
+    def _trace(self, name: str, result: ToolResult) -> None:
+        """Un hook en erreur est signalé, jamais propagé à l'agent."""
+        if self._on_call is None:
+            return
+        try:
+            self._on_call(name, result)
+        except Exception:  # noqa: BLE001
+            pass
 
     @property
     def names(self) -> frozenset[str]:
