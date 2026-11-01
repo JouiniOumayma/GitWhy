@@ -63,31 +63,6 @@ MAX_HOPS_IN_PROMPT = 15
 #: Chemins plausibles d'un repo Python (démo httpie/cli : ``.py`` uniquement).
 _PATH_RE = re.compile(r"\b(?:[\w\-./]+::)?[\w\-./]+\.py\b")
 
-_EXTRACTION_SYSTEM = (
-    "Tu extrais une entité d'une question Python. "
-    "Réponds STRICTEMENT en JSON: {\"file_path\": \"chemin/relatif.py\"} "
-    "si la question mentionne un fichier, sinon {\"file_path\": null}. "
-    "N'invente aucun chemin absent de la question."
-)
-
-_DRAFT_SYSTEM = (
-    "Tu es l'agent NEXUS-DevIntel, analyste d'impact logiciel. "
-    "Tu rédiges une réponse courte (5-8 phrases, en français) UNIQUEMENT à "
-    "partir des preuves listées dans la question utilisateur. "
-    "Interdictions: inventer un fichier, un commit ou une prédiction non "
-    "portée par un hop de l'EvidencePath; citer une ligne qui n'y figure pas. "
-    "Si la preuve est faible, dis-le franchement."
-)
-
-_CRITIC_SYSTEM = (
-    "Tu es le Critic de NEXUS-DevIntel. On te donne une réponse candidate et "
-    "les hops d'un EvidencePath réel issu du graphe Neo4j. "
-    "Vérifie une seule chose: CHAQUE affirmation de la réponse est appuyée "
-    "par au moins un hop (node_id, relation, role). "
-    "Réponds STRICTEMENT en JSON: "
-    "{\"supported\": true|false, \"reason\": \"<une phrase>\"}."
-)
-
 
 def extract_file_candidate(question: str) -> str | None:
     """Le candidat fichier dans la question (regex pure, 0 LLM)."""
@@ -102,7 +77,37 @@ class ImpactAgent:
 
     ``llm=None`` (ou clé API absente) => rédaction et Critic déterministes :
     l'``Answer`` reste adossée aux hops réels du graphe, jamais inventée.
+
+    Sous-classé par ``RootCauseAgent`` (T5) qui ne change que l'intention,
+    les prompts et le nœud Investigation ; les nœuds Rédaction, Critic et
+    Finalisation sont partagés tels quels.
     """
+
+    #: intention de la ``Answer`` produite (CHANGE_IMPACT ici).
+    INTENT: AnswerIntent = AnswerIntent.CHANGE_IMPACT
+    #: prompt d'extraction d'entité (json_mode, ``{<clé>: valeur|null}``).
+    EXTRACTION_SYSTEM = (
+        "Tu extrais une entité d'une question Python. "
+        "Réponds STRICTEMENT en JSON: {\"file_path\": \"chemin/relatif.py\"} "
+        "si la question mentionne un fichier, sinon {\"file_path\": null}. "
+        "N'invente aucun chemin absent de la question."
+    )
+    DRAFT_SYSTEM = (
+        "Tu es l'agent NEXUS-DevIntel, analyste d'impact logiciel. "
+        "Tu rédiges une réponse courte (5-8 phrases, en français) UNIQUEMENT à "
+        "partir des preuves listées dans la question utilisateur. "
+        "Interdictions: inventer un fichier, un commit ou une prédiction non "
+        "portée par un hop de l'EvidencePath; citer une ligne qui n'y figure pas. "
+        "Si la preuve est faible, dis-le franchement."
+    )
+    CRITIC_SYSTEM = (
+        "Tu es le Critic de NEXUS-DevIntel. On te donne une réponse candidate et "
+        "les hops d'un EvidencePath réel issu du graphe Neo4j. "
+        "Vérifie une seule chose: CHAQUE affirmation de la réponse est appuyée "
+        "par au moins un hop (node_id, relation, role). "
+        "Réponds STRICTEMENT en JSON: "
+        "{\"supported\": true|false, \"reason\": \"<une phrase>\"}."
+    )
 
     def __init__(self, tools: ToolRegistry, llm: Any = None) -> None:
         self._tools = tools
@@ -118,7 +123,7 @@ class ImpactAgent:
         if candidate is None and self._llm is not None and can_call_llm(state):
             patch = llm_call_patch(state)
             try:
-                out = self._llm.chat(_EXTRACTION_SYSTEM, state["question"], json_mode=True)
+                out = self._llm.chat(self.EXTRACTION_SYSTEM, state["question"], json_mode=True)
                 value = (out.data or {}).get("file_path")
                 candidate = value.strip() if isinstance(value, str) and value.strip() else None
             except Exception:
@@ -162,7 +167,7 @@ class ImpactAgent:
                 f"Question: {state['question']}\n\n"
                 f"EvidencePath (score global {path.score}):\n{self._hops_prompt(path)}"
             )
-            patch["draft_answer"] = self._llm.chat(_DRAFT_SYSTEM, user).content.strip()
+            patch["draft_answer"] = self._llm.chat(self.DRAFT_SYSTEM, user).content.strip()
             return patch
         return {"draft_answer": self._fallback_draft(path)}
 
@@ -184,7 +189,7 @@ class ImpactAgent:
                 f"Preuves disponibles:\n{self._hops_prompt(path)}"
             )
             try:
-                data = self._llm.chat(_CRITIC_SYSTEM, user, json_mode=True).data or {}
+                data = self._llm.chat(self.CRITIC_SYSTEM, user, json_mode=True).data or {}
                 supported = bool(data.get("supported"))
                 reason = str(data.get("reason", "sans motif"))
             except Exception:
@@ -220,7 +225,7 @@ class ImpactAgent:
         answer = Answer(
             id=f"ans-{utcnow().strftime('%Y%m%d-%H%M%S-%f')}",
             question=state["question"],
-            intent=AnswerIntent.CHANGE_IMPACT,
+            intent=self.INTENT,
             answer_text=state["draft_answer"] if accepted else "",
             status=AnswerStatus.OK if accepted else AnswerStatus.INSUFFICIENT_EVIDENCE,
             repository_id=state["repo_id"],
@@ -289,9 +294,11 @@ class ImpactAgent:
 # --------------------------------------------------------------------------- #
 # Assemblage du graphe LangGraph                                               #
 # --------------------------------------------------------------------------- #
-def build_impact_agent(tools: ToolRegistry, llm: Any = None) -> StateGraph:
-    """Graphe compilé : START -> investigate -> draft -> critic -> finalize."""
-    agent = ImpactAgent(tools, llm)
+def build_agent_graph(agent: ImpactAgent) -> StateGraph:
+    """Graphe compilé : START -> investigate -> draft -> critic -> finalize.
+
+    Partagé par les deux agents (T4 et T5) : seule l'instance change.
+    """
     graph = StateGraph(AgentState)
     graph.add_node("investigate", agent.investigate)
     graph.add_node("draft", agent.draft)
@@ -310,6 +317,11 @@ def build_impact_agent(tools: ToolRegistry, llm: Any = None) -> StateGraph:
     graph.add_conditional_edges("critic", _after_critic, ["draft", "finalize"])
     graph.add_edge("finalize", END)
     return graph.compile()
+
+
+def build_impact_agent(tools: ToolRegistry, llm: Any = None) -> StateGraph:
+    """Graphe Change Impact compilé (T4)."""
+    return build_agent_graph(ImpactAgent(tools, llm))
 
 
 def run_impact_agent(
