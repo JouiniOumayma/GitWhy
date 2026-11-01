@@ -12,3 +12,6 @@ psycopg[binary]>=3.1,<4
 
 # Reading docker-compose / config files in scripts
 PyYAML>=6.0,<7
+
+# Agents (Phase 3)
+langgraph>=0.6,<1
