@@ -15,6 +15,7 @@ from .state import (
     llm_budget_left,
     retry_patch,
 )
+from .tools import ToolNotFoundError, ToolRegistry, ToolResult
 
 __all__ = [
     "AgentBudget",
@@ -26,4 +27,7 @@ __all__ = [
     "llm_call_patch",
     "llm_budget_left",
     "retry_patch",
+    "ToolNotFoundError",
+    "ToolRegistry",
+    "ToolResult",
 ]
