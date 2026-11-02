@@ -194,7 +194,11 @@ class ToolRegistry:
     def _find_file_id(self, path_or_id: str) -> dict[str, Any]:
         if self._impact is None:
             raise RuntimeError("driver Neo4j non configure (stack live requise)")
-        candidate = path_or_id.strip()
+        if path_or_id is None:
+            return {"file_id": None, "error": "aucun candidat fichier"}
+        candidate = str(path_or_id).strip()
+        if not candidate:
+            return {"file_id": None, "error": "aucun candidat fichier"}
         if "::" not in candidate:
             candidate = f"{self._repository_id}::{candidate}"
         if self._impact.file_exists(candidate):
@@ -204,7 +208,13 @@ class ToolRegistry:
     def _find_incident_id(self, issue_number: int | str) -> dict[str, Any]:
         if self._root_cause is None:
             raise RuntimeError("driver Neo4j non configure (stack live requise)")
-        incident_id = f"{self._repository_id}#issue-{int(issue_number)}"
+        if issue_number is None:
+            return {"incident_id": None, "error": "aucun numéro d'incident"}
+        try:
+            num = int(issue_number)
+        except (TypeError, ValueError):
+            return {"incident_id": None, "error": f"numéro d'incident invalide : {issue_number!r}"}
+        incident_id = f"{self._repository_id}#issue-{num}"
         if self._root_cause.incident_exists(incident_id):
             return {"incident_id": incident_id}
         return {"incident_id": None, "error": f"'{incident_id}' n'est pas dans le graphe"}

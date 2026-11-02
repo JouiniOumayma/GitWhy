@@ -49,7 +49,7 @@ __all__ = [
 ]
 
 #: ``#1583``, ``issue 1583``, ``bug 1583``...
-_ISSUE_RE = re.compile(r"(?:#|issue[ \-]?|bug[ \-]?)(\d{1,7})", re.IGNORECASE)
+_ISSUE_RE = re.compile(r"(?:#|issue|incident|bug)[ \-]?(\d{1,7})", re.IGNORECASE)
 
 _MAX_HYBRID_MATCHES = 5
 
