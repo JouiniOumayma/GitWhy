@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { StatCard } from './StatCard'
+import GraphView from './GraphView'
 import './App.css'
 
 // ── Mini composants inline ────────────────────────────────────────────────────
@@ -75,26 +76,141 @@ function AgentTrace({ trace }) {
 
 // ── Exemples de questions ─────────────────────────────────────────────────────
 
-const EXAMPLES = [
-  { id: '1', question: "Que se passe-t-il si je change httpie/cli::httpie/context.py ?", type: 'change_impact' },
-  { id: '2', question: "Quel est l'impact du retrait de httpie/context.py ?", type: 'change_impact' },
-  { id: '3', question: "Pourquoi l'incident 1583 s'est-il produit ?", type: 'root_cause' },
-  { id: '4', question: "Quelle est la cause racine de l'incident 1583 ?", type: 'root_cause' },
-]
+// ── Ingestion : libellés d'étapes ────────────────────────────────────────────
+
+const STEP_LABELS = {
+  tree: 'Arborescence GitHub',
+  imports: 'Imports (AST)',
+  graph: 'Écriture Neo4j',
+  history: 'Historique git',
+  pulls: 'Pull requests',
+  vectors: 'Chunks + embeddings',
+  verify: 'Vérification',
+}
+
+const JOB_LABELS = {
+  queued: 'en attente',
+  running: 'en cours',
+  completed: 'terminé',
+  failed: 'échec',
+}
+
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function App() {
+export default function App({ repoId = null } = {}) {
   const [loading, setLoading] = useState(false)
   const [answer, setAnswer] = useState(null)
   const [stats, setStats] = useState(null)
   const [trace, setTrace] = useState([])
   const [error, setError] = useState(null)
   const inputRef = useRef(null)
+  // Dépôt visé : champ editable, mémorisé, sinon celui du serveur.
+  const [repo, setRepo] = useState(
+    () => (typeof localStorage !== 'undefined' && localStorage.getItem('nexus.repo')) || repoId || '',
+  )
+  const [job, setJob] = useState(null)
+  const [ingesting, setIngesting] = useState(false)
+  // Dernière question posée : permet de la rejouer sur un autre dépôt.
+  const lastQuestion = useRef('')
+  // Fichiers les plus structurants du dépôt choisi → questions d'exemple pertinentes.
+  const [exampleFiles, setExampleFiles] = useState([])
+  const targetRepo = (repo || repoId || stats?.repository || '').trim()
 
-  const submit = async (question) => {
+  useEffect(() => {
+    const r = targetRepo
+    if (!r) { setExampleFiles([]); return }
+    let cancelled = false
+    fetch(`/api/top-files?repo_id=${encodeURIComponent(r)}&limit=5`)
+      .then((res) => (res.ok ? res.json() : { files: [] }))
+      .then((d) => { if (!cancelled) setExampleFiles(Array.isArray(d?.files) ? d.files : []) })
+      .catch(() => { if (!cancelled) setExampleFiles([]) })
+    return () => { cancelled = true }
+  }, [targetRepo])
+
+  const loadStats = async (forRepo) => {
+    const wanted = (forRepo ?? targetRepo).trim()
+    const query = wanted ? `?repo_id=${encodeURIComponent(wanted)}` : ''
+    try {
+      const resp = await fetch(`/api/stats${query}`)
+      if (resp.ok) setStats(await resp.json())
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => { loadStats() }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const commitRepo = () => {
+    const cleaned = repo.trim()
+    setRepo(cleaned)
+    if (typeof localStorage !== 'undefined') {
+      if (cleaned) localStorage.setItem('nexus.repo', cleaned)
+      else localStorage.removeItem('nexus.repo')
+    }
+    loadStats(cleaned)
+  }
+
+  // Ingestion d'un dépôt depuis son lien, suivie étape par étape.
+  const startIngest = async () => {
+    const raw = repo.trim()
+    if (!raw || ingesting) return
+    setIngesting(true)
+    setError(null)
+    setAnswer(null)
+    setJob(null)
+    try {
+      const resp = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repository: raw }),
+      })
+      const created = await resp.json().catch(() => ({}))
+      if (!resp.ok) throw new Error(created.detail || `Erreur HTTP ${resp.status}`)
+      // Le POST ne renvoie que l'accusé (job_id, statut) : on complète les
+      // champs que le panneau lit, sinon le premier rendu casse.
+      setJob({ steps: [], result: null, error: null, ...created })
+      // Forme canonique (`owner/name`) : c'est sous cette clé que le graphe
+      // est écrit, et c'est elle qu'il faut interroger — même si l'utilisateur
+      // a collé un lien complet.
+      if (created.repository) {
+        setRepo(created.repository)
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('nexus.repo', created.repository)
+        }
+      }
+
+      let current = created
+      while (current.status === 'queued' || current.status === 'running') {
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+        const poll = await fetch(`/api/ingest/${created.job_id}`)
+        if (!poll.ok) break
+        current = await poll.json()
+        setJob(current)
+      }
+
+      if (current.status === 'completed') {
+        const name = current.repository || raw
+        setRepo(name)
+        if (typeof localStorage !== 'undefined') localStorage.setItem('nexus.repo', name)
+        await loadStats(name)
+      } else if (current.status === 'failed') {
+        setError(current.error || 'ingestion échouée')
+      } else {
+        setError('suivi du job interrompu : recharge la page pour vérifier')
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIngesting(false)
+    }
+  }
+
+  const submit = async (question, overrideRepo) => {
     const q = (question ?? inputRef.current?.value ?? '').trim()
     if (!q) return
+    lastQuestion.current = q
+    const repoForQuery = (overrideRepo ?? targetRepo).trim()
 
     setLoading(true)
     setError(null)
@@ -102,15 +218,14 @@ export default function App() {
     setTrace([])
 
     try {
-      // Stats
-      const statsResp = await fetch('/api/stats')
-      if (statsResp.ok) setStats(await statsResp.json())
+      // Stats du dépôt interrogé
+      await loadStats(repoForQuery)
 
       // Réponse
       const resp = await fetch('/api/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, repo_id: repoForQuery || undefined }),
       })
 
       if (!resp.ok) {
@@ -138,6 +253,14 @@ export default function App() {
 
   const handleKey = (e) => { if (e.key === 'Enter') submit() }
 
+  // Le fichier demandé vit dans un autre dépôt : on bascule et on rejoue.
+  const analyseOtherRepo = async (hintRepo) => {
+    setRepo(hintRepo)
+    if (typeof localStorage !== 'undefined') localStorage.setItem('nexus.repo', hintRepo)
+    await loadStats(hintRepo)
+    await submit(lastQuestion.current, hintRepo)
+  }
+
   return (
     <div className="app">
 
@@ -148,13 +271,64 @@ export default function App() {
           <p className="header-subtitle">Agentic GraphRAG</p>
         </div>
         <div className="header-right">
-          <span className="repo-badge">httpie/cli</span>
+          <input
+            type="text"
+            id="repo-input"
+            className="repo-input"
+            value={repo}
+            onChange={(e) => setRepo(e.target.value)}
+            onBlur={commitRepo}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitRepo() } }}
+            placeholder="lien GitHub ou owner/name"
+            title="Colle un lien de dépôt, puis clique sur Ingérer"
+          />
+          <button
+            type="button"
+            id="ingest-btn"
+            className="ingest-btn"
+            onClick={startIngest}
+            disabled={ingesting || !repo.trim()}
+            title="Télécharger le dépôt, construire le graphe et indexer le code"
+          >
+            {ingesting ? 'Ingestion…' : 'Ingérer'}
+          </button>
           <span className="connection-status">
             <span className="dot" />
             Connecté
           </span>
         </div>
       </header>
+
+      {/* ── Progression de l'ingestion ─────────────────────────────────────── */}
+      {job && (
+        <section className="ingest-panel">
+          <div className="ingest-head">
+            <strong>{job.repository}</strong>
+            <span className={`ingest-status ingest-status--${job.status}`}>
+              {JOB_LABELS[job.status] ?? job.status}
+            </span>
+          </div>
+          <ul className="ingest-steps">
+            {(job.steps ?? []).map((s) => (
+              <li key={s.name}>
+                <span className="ingest-mark">
+                  {s.status === 'done' ? '✓' : s.status === 'failed' ? '✗' : '⏳'}
+                </span>
+                <strong>{STEP_LABELS[s.name] ?? s.name}</strong>
+                <span className="ingest-detail">{s.detail}</span>
+              </li>
+            ))}
+          </ul>
+          {job.result && (
+            <p className="ingest-summary">
+              {job.result.files} fichiers · {job.result.imports} IMPORTS ·{' '}
+              {job.result.history?.commits ?? 0} commits · {job.result.pulls?.prs ?? 0} PRs ·{' '}
+              {job.result.vectors?.chunks ?? 0} chunks · {job.result.duration_s}s
+            </p>
+          )}
+          {job.error && <p className="ingest-error">{job.error}</p>}
+        </section>
+      )}
 
       {/* ── Stats ──────────────────────────────────────────────────────────── */}
       {stats && (
@@ -193,19 +367,23 @@ export default function App() {
           </button>
         </div>
 
-        {!loading && (
+        {!loading && exampleFiles.length > 0 && (
           <div className="example-chips">
-            <h3>Questions d'exemple</h3>
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex.id}
-                className="example-chip"
-                onClick={() => submit(ex.question)}
-                disabled={loading}
-              >
-                {ex.question.length > 50 ? ex.question.substring(0, 50) + '…' : ex.question}
-              </button>
-            ))}
+            <h3>Questions d'exemple pour {targetRepo}</h3>
+            {exampleFiles.map((f) => {
+              const q = `Que se casse-t-il si je modifie ${f.path} ?`
+              return (
+                <button
+                  key={f.path}
+                  className="example-chip"
+                  onClick={() => submit(q)}
+                  disabled={loading}
+                  title={`${f.dependents} fichier(s) en dépendent`}
+                >
+                  {q.length > 60 ? q.substring(0, 60) + '…' : q}
+                </button>
+              )
+            })}
           </div>
         )}
       </section>
@@ -245,15 +423,46 @@ export default function App() {
                 <h2>Réponse</h2>
                 <p className="answer-text">{answer.answer_text}</p>
 
+                {answer.repo_hint?.repositories?.length > 0 && (
+                  <div className="repo-hint">
+                    <p>
+                      <code>{answer.repo_hint.missing.join(', ')}</code> n'existe pas dans{' '}
+                      <strong>{targetRepo || 'ce dépôt'}</strong>, mais il est ingéré ailleurs :
+                    </p>
+                    <div className="repo-hint-actions">
+                      {answer.repo_hint.repositories.map((r) => (
+                        <button
+                          key={r.repo_id}
+                          className="repo-hint-btn"
+                          onClick={() => analyseOtherRepo(r.repo_id)}
+                          disabled={loading}
+                        >
+                          Analyser {r.repo_id}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(() => {
+                  const hop = (answer.evidence_path?.hops ?? []).find(
+                    (h) => h?.node_kind === 'File' && typeof h.node_id === 'string',
+                  )
+                  return hop ? <GraphView repoId={targetRepo} focus={hop.node_id} /> : null
+                })()}
+
                 {answer.evidence_path?.hops?.length > 0 && (
-                  <div className="evidence-path">
-                    <h3>EvidencePath</h3>
+                  <details className="evidence-path">
+                    <summary>
+                      Détails techniques — les {answer.evidence_path.hops.length} preuves
+                      utilisées par l'analyse
+                    </summary>
                     <pre className="path-text">
                       {answer.evidence_path.hops.map((h, i) =>
                         `${i + 1}. [${h.node_kind}] ${h.node_id} (${h.role})${h.rationale ? ' — ' + h.rationale : ''}`
                       ).join('\n')}
                     </pre>
-                  </div>
+                  </details>
                 )}
               </div>
             </div>
@@ -271,20 +480,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Démo sécurité */}
-          <div className="security-demo">
-            <button
-              className="security-btn"
-              onClick={() => alert('Action bloquée : écriture non autorisée dans Neo4j / Postgres / GitHub')}
-            >
-              🔒 Tester une action interdite
-            </button>
-            {answer.escalated && (
-              <p className="escalade-notes">
-                ⚠️ Réponse escaladée — confiance insuffisante, vérification humaine recommandée
-              </p>
-            )}
-          </div>
         </section>
       )}
     </div>

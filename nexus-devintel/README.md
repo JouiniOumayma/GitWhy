@@ -1,7 +1,7 @@
 # NEXUS-DevIntel — Semaine 1 : fondations communes
 
 Knowledge Graph Neo4j construit à partir d'un **vrai** repository GitHub
-(`httpie/cli`), pour faire du **Change Impact Analysis** et du **Root Cause
+(`owner/name`), pour faire du **Change Impact Analysis** et du **Root Cause
 Analysis** avec un agent LangGraph qui répond avec des preuves (`EvidencePath`) et
 un score de confiance.
 
@@ -136,9 +136,9 @@ aucune méthode du client ne peut modifier le dépôt.
 python - <<'EOF'
 from ingestion import GitHubClient, repository_from_api
 client = GitHubClient()
-payload, url = client.repository("httpie/cli")
+payload, url = client.repository("owner/name")
 repo = repository_from_api(payload, url)
-print(repo.id, repo.provenance.source)  # httpie/cli github_api
+print(repo.id, repo.provenance.source)  # owner/name github_api
 EOF
 
 # Webhook local : vérifie la signature HMAC puis pousse les commits dans Neo4j
@@ -180,8 +180,8 @@ Les fixtures *simulent* la chaîne de preuves ; `retrieval/impact.py` la **const
 en traversant Neo4j :
 
 ```bash
-python scripts/impact.py httpie/cli::httpie/context.py
-python scripts/impact.py httpie/cli::httpie/ssl_.py --json report.json --write
+python scripts/impact.py owner/name::path/to/file.py
+python scripts/impact.py owner/name::path/to/other.py --json report.json --write
 ```
 
 Chaque fichier atteint par `(:File)-[:IMPORTS*1..7]->(target)` devient un
@@ -228,7 +228,7 @@ Le détail, la liste complète des relations avec leur sens et leur payload, et 
 requêtes canoniques sont dans **[`schema/README.md`](schema/README.md)**.
 
 Le point de conception à retenir : `:CLOSES` est modélisé sur `:PR` **et** sur
-`:Commit`, parce que les 113 commits de `httpie/cli` qui portent un
+`:Commit`, parce que les 113 commits de `owner/name` qui portent un
 `Closes/Fixes #N` ne sont pas tous rattachables à une pull request.
 
 ## 3. `docker-compose.yml`
@@ -300,13 +300,13 @@ produit les arêtes `(:PR)-[:CLOSES]->(:Incident)` avec
 
 ```bash
 # dry-run : liste les arêtes sans rien écrire (token requis)
-python scripts/enrich_graphql.py httpie/cli --dry-run
+python scripts/enrich_graphql.py owner/name --dry-run
 
 # pass complet (~3 requêtes GraphQL pour ~280 PRs), MERGE idempotent
-python scripts/enrich_graphql.py httpie/cli
+python scripts/enrich_graphql.py owner/name
 
 # re-run ciblé sur la PR de la chaîne de démo (idempotent)
-python scripts/enrich_graphql.py httpie/cli --pr 1596
+python scripts/enrich_graphql.py owner/name --pr 123
 ```
 
 Lecture seule garantie : la requête est une constante de module (paramètres
@@ -324,12 +324,12 @@ produit des confiances d'arêtes × décroissance 0.85^distance, rôles
 symptom → fix → root_cause → timeline :
 
 ```bash
-python scripts/root_cause.py httpie/cli#issue-1583
-python scripts/root_cause.py httpie/cli#issue-1583 --write
+python scripts/root_cause.py owner/name#issue-123
+python scripts/root_cause.py owner/name#issue-123 --write
 
 # graphe + vecteurs : ajoute les preuves hybrid_search_code_chunks
-python scripts/root_cause.py httpie/cli#issue-1583 --hybrid \
-    --hybrid-query "SSL certificate verify failed"
+python scripts/root_cause.py owner/name#issue-123 --hybrid \
+    --hybrid-query "incident description text"
 ```
 
 `HybridRetriever` appelle la fonction SQL existante
@@ -361,7 +361,7 @@ Phase 1 (pas en le dupliquant) :
 python scripts/index_embeddings.py --real-content --from-api --ingest-tree
 
 # variante avec un clone local (aucune requête API)
-python scripts/index_embeddings.py --real-content --repo-path ../httpie-cli
+python scripts/index_embeddings.py --real-content --repo-path ../owner-name
 ```
 
 Chaque corps est vérifié par `sha1("blob <len>\0" + contenu)` contre le
@@ -409,27 +409,24 @@ mock :
    vérifiée sur tous les nœuds ;
 2. `index_embeddings.py --real-content --from-api --ingest-tree --prune` →
    arbre HEAD ingéré (265 `(:File)`), **774 chunks indexés dont 726
-   `git_blob_verified`** (vrai code httpie/cli), 773 vecteurs réels pour
-   `httpie/cli` + 1 pour `psf/requests`, **0 vecteur NULL** ; run tracé dans
+   `git_blob_verified`** (vrai code owner/name), 773 vecteurs réels pour
+   `owner/name` + 1 pour `psf/requests`, **0 vecteur NULL** ; run tracé dans
    `ingestion_runs` ;
 3. **re-run → `written: 0`, `embedded: 0`, `pruned: 0`** : l'idempotence
    (`content_hash` + `embedding_model`) et le `--prune` sont démontrables en
    direct, sans re-télécharger ni re-encoder ;
 4. `hybrid_search_code_chunks` avec MiniLM : requête « SSL certificate verify
-   failed » → `tests/test_ssl.py` (0.484), `httpie/cli/definition.py` (0.476),
-   `httpie/ssl_.py` (0.469) — le retrieval sémantique ramène bien le code réel
+   failed » → `tests/test_ssl.py` (0.484), `owner/name/definition.py` (0.476),
+   `owner/name/ssl_.py` (0.469) — le retrieval sémantique ramène bien le code réel
    du correctif ;
 5. enrichissement GraphQL réel : 817 PRs parcourues, 156 avec
-   `closingIssuesReferences`, **195 arêtes `(:PR)-[:CLOSES]->(:Incident)` à
+   `closingIssuesReferences`, **   195 arêtes `(:PR)-[:CLOSES]->(:Incident)` à
    confidence 1.0** (`prov_source=github_graphql`) — à comparer aux 8 arêtes
-   `git` (0.95) et 1 `synthetic_fixture` (0.6) que le log local seul fournit ;
-6. `root_cause.py "httpie/cli#issue-1583" --write --hybrid` → EvidencePath
+   `git` (0.95) et 1 `synthetic_fixture` (0.6) que le log local seul fournit ;   6. `root_cause.py "owner/name#issue-123" --write --hybrid` → EvidencePath
    valide (**score 0.6327**), 15 fix commits, 5 PRs, 9 fichiers, 6 deployments,
-   48 `Evidence` persistées (`MERGE` idempotent) + preuves hybrides MiniLM ;
-7. MCP live : `mcp_github.py --list-tools` → 5 outils read-only
+   48 `Evidence` persistées (`MERGE` idempotent) + preuves hybrides MiniLM ;   7. MCP live : `mcp_github.py --list-tools` → 5 outils read-only
    (`get_file`, `list_files`, `get_commit`, `get_pull_request`,
-   `search_issues`) ; `get_file` vérifie le contenu contre le blob SHA ;
-8. non-régression : `impact.py httpie/cli::httpie/context.py` retrouve les
+   `search_issues`) ; `get_file` vérifie le contenu contre le blob SHA ;   8. non-régression : `impact.py owner/name::path/to/file.py` retrouve les
    22 dépendants directs / 37 transitifs / profondeur 7 documentés ;
 9. sécurité : `pytest tests/test_security.py -v` → **17 tests d'attaque
    passent** (mutation GraphQL refusée avant transport, `GraphWriter` en

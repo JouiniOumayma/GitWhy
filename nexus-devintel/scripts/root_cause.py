@@ -3,10 +3,10 @@
 
 Phase 2 usage (stack running + fixtures loaded)::
 
-    python scripts/root_cause.py httpie/cli#issue-1583
-    python scripts/root_cause.py httpie/cli#issue-1583 --max-depth 4 --json out.json
-    python scripts/root_cause.py httpie/cli#issue-1583 --write
-    python scripts/root_cause.py httpie/cli#issue-1583 --hybrid --hybrid-query \
+    python scripts/root_cause.py owner/name#issue-123
+    python scripts/root_cause.py owner/name#issue-123 --max-depth 4 --json out.json
+    python scripts/root_cause.py owner/name#issue-123 --write
+    python scripts/root_cause.py owner/name#issue-123 --hybrid --hybrid-query \
         "SSL certificate verify failed after requests upgrade"
 
 Read-only against Neo4j and PostgreSQL; ``--write`` additionally persists the
@@ -50,7 +50,7 @@ def _print_hybrid(report: "object", limit: int = 5) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("incident_id", help="incident id, e.g. httpie/cli#issue-1583")
+    parser.add_argument("incident_id", help="incident id, e.g. owner/name#issue-123")
     parser.add_argument("--max-depth", type=int, default=6,
                         help="maximum traversal depth (default 6)")
     parser.add_argument("--limit", type=int, default=200,

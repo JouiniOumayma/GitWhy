@@ -196,10 +196,10 @@ def test_gemini_chat_nominal() -> None:
     assert out.content == "pong"
     assert out.data is None
     assert out.total_tokens == 15
-    assert out.model == "gemini-2.5-flash"
+    assert out.model == "gemini-flash-lite-latest"
 
     (call,) = calls
-    assert "gemini-2.5-flash" in call["url"]
+    assert "gemini-flash-lite-latest" in call["url"]
     # Les clés AQ. passent via header x-goog-api-key, pas en query-param
     assert GEMINI_KEY not in call["url"]
     assert call["headers"]["x-goog-api-key"] == GEMINI_KEY
@@ -208,6 +208,32 @@ def test_gemini_chat_nominal() -> None:
     assert call["payload"]["system_instruction"]["parts"][0]["text"] == "Tu es un assistant."
     assert call["payload"]["contents"][0]["parts"][0]["text"] == "ping"
     assert "generationConfig" not in call["payload"]
+
+
+def test_gemini_falls_back_to_next_model() -> None:
+    """Un modèle retiré (404) ne bloque pas l'appel : le repli prend le relais."""
+    from urllib.error import HTTPError
+
+    seen: list[str] = []
+
+    def transport(url, headers, body, timeout):  # noqa: ANN001
+        model = url.rsplit("/models/", 1)[1].split(":")[0]
+        seen.append(model)
+        if model == "gone-model":
+            raise HTTPError(url, 404, "model retired", None, None)
+        return _gemini_response("pong")
+
+    client = GeminiClient(
+        GEMINI_KEY,
+        model="gone-model",
+        fallback_models=("alive-model",),
+        transport=transport,
+    )
+    out = client.chat("s", "u")
+
+    assert out.content == "pong"
+    assert out.model == "alive-model"
+    assert seen == ["gone-model", "alive-model"]
 
 
 def test_gemini_chat_json_mode() -> None:
@@ -270,7 +296,7 @@ def test_gemini_from_env_reads_key_and_model(monkeypatch) -> None:
     monkeypatch.delenv("NEXUS_LLM_MODEL", raising=False)
     client2 = GeminiClient.from_env()
     assert client2 is not None
-    assert client2._model == "gemini-2.5-flash"  # noqa: SLF001
+    assert client2._model == "gemini-flash-lite-latest"  # noqa: SLF001
 
 
 def test_gemini_empty_api_key_is_refused() -> None:

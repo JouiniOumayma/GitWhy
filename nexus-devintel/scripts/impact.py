@@ -3,8 +3,8 @@
 
 Phase 1 usage (stack running + fixtures loaded)::
 
-    python scripts/impact.py httpie/cli::httpie/context.py
-    python scripts/impact.py httpie/cli::httpie/ssl_.py --max-depth 3 --json out.json
+    python scripts/impact.py owner/name::path/to/file.py
+    python scripts/impact.py owner/name::path/to/other.py --max-depth 3 --json out.json
 
 Read-only against Neo4j; ``--write`` additionally persists the Evidence nodes
 and the path (``MERGE``d, so re-running is safe).
@@ -37,7 +37,7 @@ def _load_dotenv(path: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("file_id", help="target file id, e.g. httpie/cli::httpie/context.py")
+    parser.add_argument("file_id", help="target file id, e.g. owner/name::path/to/file.py")
     parser.add_argument("--max-depth", type=int, default=7,
                         help="maximum IMPORTS traversal depth (default 7)")
     parser.add_argument("--limit", type=int, default=1000,

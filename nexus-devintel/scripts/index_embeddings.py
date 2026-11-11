@@ -127,7 +127,7 @@ def main() -> int:
     _load_dotenv(PROJECT_ROOT / ".env")
     dsn = args.dsn or os.environ.get("POSTGRES_DSN") or \
         "postgresql://nexus:nexus@localhost:5432/nexus"
-    repository_id = args.repository_id or os.environ.get("NEXUS_REPO_ID", "httpie/cli")
+    repository_id = args.repository_id or os.environ.get("NEXUS_REPO_ID") or "httpie/cli"
 
     provider = None
     blob_cache_dir = PROJECT_ROOT / ".blob_cache"

@@ -3,14 +3,14 @@
 
 Week-2 Phase 2 usage (stack running, fixtures loaded, GITHUB_TOKEN set)::
 
-    # full pass over httpie/cli (~3 GraphQL requests for ~280 PRs)
-    python scripts/enrich_graphql.py httpie/cli
+    # full pass over owner/name (~3 GraphQL requests for ~280 PRs)
+    python scripts/enrich_graphql.py owner/name
 
     # idempotent targeted re-run on the demo chain's PR
-    python scripts/enrich_graphql.py httpie/cli --pr 1596
+    python scripts/enrich_graphql.py owner/name --pr 123
 
     # see what would be written, without writing anything (needs a token)
-    python scripts/enrich_graphql.py httpie/cli --dry-run
+    python scripts/enrich_graphql.py owner/name --dry-run
 
 Read-only guarantee: the GraphQL client refuses mutations before transport;
 the only writes are idempotent ``MERGE``s into the local Neo4j.
@@ -57,7 +57,7 @@ def _print_stats(stats: EnrichmentStats) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("repository_id", help="owner/name, e.g. httpie/cli")
+    parser.add_argument("repository_id", help="owner/name, e.g. owner/name")
     parser.add_argument("--pr", type=int, action="append", default=None,
                         help="restrict the pass to one PR number (repeatable)")
     parser.add_argument("--no-create-incidents", action="store_true",

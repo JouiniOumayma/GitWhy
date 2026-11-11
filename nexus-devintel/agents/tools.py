@@ -80,6 +80,11 @@ class ToolRegistry:
     ) -> None:
         self._repository_id = repository_id
         self._github_client = github_client
+        #: exposés tels quels pour que l'API lise les compteurs réels de la
+        #: stack (Neo4j via driver, pgvector via dsn) sans les réinventer.
+        self._driver = driver
+        self._dsn = dsn
+        self._database = database
         if driver is not None:
             self._impact = ChangeImpactAnalyzer(driver, database)
             self._root_cause = RootCauseAnalyzer(driver, database)

@@ -94,8 +94,15 @@ class ImpactAgent:
     )
     DRAFT_SYSTEM = (
         "Tu es l'agent NEXUS-DevIntel, analyste d'impact logiciel. "
-        "Tu rédiges une réponse courte (5-8 phrases, en français) UNIQUEMENT à "
+        "Tu rédiges une réponse courte (4-6 phrases, en français) UNIQUEMENT à "
         "partir des preuves listées dans la question utilisateur. "
+        "Écris pour une personne qui ne programme pas : phrases courtes, pas de "
+        "jargon (évite « AST », « import », « nœud », « arête »). "
+        "Ne donne AUCUN nombre de fichiers : l'interface affiche les compteurs "
+        "exacts, un chiffre dans le texte créerait une contradiction. Dis "
+        "l'ampleur en mots (« quelques », « plusieurs », « beaucoup »), cite au "
+        "plus trois fichiers sans leur chemin complet, et explique ce qui peut "
+        "casser concrètement. "
         "Interdictions: inventer un fichier, un commit ou une prédiction non "
         "portée par un hop de l'EvidencePath; citer une ligne qui n'y figure pas. "
         "Si la preuve est faible, dis-le franchement."
@@ -167,8 +174,19 @@ class ImpactAgent:
                 f"Question: {state['question']}\n\n"
                 f"EvidencePath (score global {path.score}):\n{self._hops_prompt(path)}"
             )
-            patch["draft_answer"] = self._llm.chat(self.DRAFT_SYSTEM, user).content.strip()
-            return patch
+            try:
+                patch["draft_answer"] = self._llm.chat(
+                    self.DRAFT_SYSTEM, user
+                ).content.strip()
+                return patch
+            except Exception as exc:  # noqa: BLE001 - la preuve prime sur la prose
+                # Tous les modèles ont échoué : on garde l'EvidencePath déjà
+                # construit par le graphe et on rédige le texte déterministe.
+                patch["draft_answer"] = self._fallback_draft(path)
+                patch["critic_notes"] = list(state["critic_notes"]) + [
+                    f"rédaction LLM indisponible ({exc}) : texte déterministe"
+                ]
+                return patch
         return {"draft_answer": self._fallback_draft(path)}
 
     # ------------------------------------------------------------------ #

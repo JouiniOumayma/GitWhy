@@ -9,6 +9,7 @@ sinon Mistral si ``MISTRAL_API_KEY`` est défini, sinon ``None`` (mode dégradé
 from __future__ import annotations
 
 import json
+import logging
 import os
 import urllib.error
 import urllib.request
@@ -24,9 +25,21 @@ __all__ = [
     "LlmProtocolError",
 ]
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
 GEMINI_ENDPOINT_TPL = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+)
+
+#: Modèle Gemini principal par défaut. ``gemini-2.5-flash`` a été retiré de
+#: l'API (404 « no longer available to new users ») : ne pas y revenir.
+DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest"
+#: Replis essayés dans l'ordre quand le principal échoue (404 / 503 / timeout).
+#: Surchargeable par ``NEXUS_LLM_FALLBACKS`` (liste séparée par des virgules).
+DEFAULT_GEMINI_FALLBACKS: tuple[str, ...] = (
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
 )
 
 #: Transport injectable pour les tests : (url, headers, body_bytes, timeout) -> dict
@@ -69,6 +82,10 @@ def _default_transport(
         raise LlmError(f"HTTP {exc.code} : {exc.reason}") from exc
     except urllib.error.URLError as exc:
         raise LlmError(f"réseau inaccessible : {exc.reason}") from exc
+    except OSError as exc:
+        # TimeoutError / connexion coupée : un timeout doit être un LlmError,
+        # sinon il remonte brut jusqu'à l'API et devient un HTTP 500.
+        raise LlmError(f"transport interrompu après {timeout:g}s : {exc}") from exc
     try:
         return json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -190,7 +207,8 @@ class GeminiClient:
         self,
         api_key: str,
         *,
-        model: str = "gemini-2.5-flash",
+        model: str = DEFAULT_GEMINI_MODEL,
+        fallback_models: tuple[str, ...] = DEFAULT_GEMINI_FALLBACKS,
         timeout_s: float = 45.0,
         transport: Transport | None = None,
     ) -> None:
@@ -198,29 +216,76 @@ class GeminiClient:
             raise ValueError("api_key vide : pas d'appel Gemini possible")
         self._api_key = api_key
         self._model = model
+        self._fallback_models = tuple(
+            m for m in fallback_models if m and m != model
+        )
         self._timeout_s = timeout_s
         self._transport = transport or _default_transport
+
+    @property
+    def model_chain(self) -> tuple[str, ...]:
+        """Modèles essayés dans l'ordre : le principal, puis les replis."""
+        return (self._model, *self._fallback_models)
 
     @classmethod
     def from_env(cls, *, default_timeout_s: float = 45.0) -> "GeminiClient | None":
         """Fabrique : lit ``GEMINI_API_KEY`` (+ ``NEXUS_LLM_MODEL`` si présent).
 
-        Renvoie ``None`` si la clé est absente.
+        ``NEXUS_LLM_FALLBACKS`` (modèles séparés par des virgules) remplace la
+        chaîne de repli par défaut. Renvoie ``None`` si la clé est absente.
         """
         api_key = os.environ.get("GEMINI_API_KEY", "").strip()
         if not api_key:
             return None
-        model = os.environ.get("NEXUS_LLM_MODEL", "").strip() or "gemini-2.5-flash"
-        return cls(api_key, model=model, timeout_s=default_timeout_s)
+        model = os.environ.get("NEXUS_LLM_MODEL", "").strip() or DEFAULT_GEMINI_MODEL
+        raw = os.environ.get("NEXUS_LLM_FALLBACKS", "").strip()
+        fallbacks = (
+            tuple(m.strip() for m in raw.split(",") if m.strip())
+            if raw
+            else DEFAULT_GEMINI_FALLBACKS
+        )
+        return cls(
+            api_key,
+            model=model,
+            fallback_models=fallbacks,
+            timeout_s=default_timeout_s,
+        )
 
     def chat(self, system: str, user: str, *, json_mode: bool = False) -> LlmOutput:
-        """UN appel vers l'API Gemini generateContent.
+        """UN appel logique : le modèle principal, puis les replis.
+
+        Un modèle retiré (404), surchargé (503) ou muet (timeout) ne doit pas
+        remonter jusqu'à l'agent : on passe au suivant, et on ne lève qu'une
+        fois la chaîne épuisée.
+        """
+        errors: list[str] = []
+        last_exc: LlmError | None = None
+        for model in self.model_chain:
+            try:
+                return self._chat_once(model, system, user, json_mode=json_mode)
+            except LlmError as exc:
+                last_exc = exc
+                errors.append(f"{model} -> {exc}")
+                logger.warning(json.dumps({
+                    "event": "llm_model_failed",
+                    "model": model,
+                    "error": str(exc),
+                }, ensure_ascii=False))
+        # On conserve la nature de la dernière panne : un JSON hors contrat
+        # reste un LlmProtocolError, un 404/503 reste un LlmError.
+        message = "chaîne de modèles épuisée : " + " | ".join(errors)
+        raise type(last_exc)(message) from last_exc
+
+    def _chat_once(
+        self, model: str, system: str, user: str, *, json_mode: bool = False
+    ) -> LlmOutput:
+        """UN appel vers l'API Gemini generateContent, sur un modèle donné.
 
         Les clés au format ``AQ.`` (nouveau format Google AI Studio) sont
         transmises via l'en-tête ``x-goog-api-key`` plutôt qu'en query-param
         ``?key=`` pour éviter les 404 de routage de l'API.
         """
-        url = GEMINI_ENDPOINT_TPL.format(model=self._model)
+        url = GEMINI_ENDPOINT_TPL.format(model=model)
 
         payload: dict[str, Any] = {
             "system_instruction": {"parts": [{"text": system}]},
@@ -263,7 +328,7 @@ class GeminiClient:
         }
 
         output = LlmOutput(
-            model=self._model,
+            model=model,
             content=content if isinstance(content, str) else "",
             token_usage=token_usage,
         )
